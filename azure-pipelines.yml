@@ -1,0 +1,24 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - script: echo "Trigger backend deploy on Render"
+    displayName: "Deploy Backend"
+  - task: Bash@3
+    inputs:
+      targetType: inline
+      script: |
+        curl -X POST "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk"
+
+  - script: echo "Trigger frontend deploy on Render"
+    displayName: "Deploy Frontend"
+  - task: Bash@3
+    inputs:
+      targetType: inline
+      script: |
+        curl -X POST "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs"
