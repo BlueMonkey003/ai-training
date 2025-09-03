@@ -3,26 +3,23 @@ trigger:
     include:
       - main
 
-# Gebruik de self-hosted agent
 pool:
   name: Default
-  # Optioneel: specifiek deze agent forceren
-  demands:
-    - agent.name -equals MyLocalAgent
 
 steps:
-  - script: echo "Trigger backend deploy on Render"
-    displayName: "Deploy Backend"
-  - task: Bash@3
-    inputs:
-      targetType: inline
-      script: |
-        curl -X POST "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk"
-
-  - script: echo "Trigger frontend deploy on Render"
-    displayName: "Deploy Frontend"
-  - task: Bash@3
-    inputs:
-      targetType: inline
-      script: |
-        curl -X POST "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs"
+  - script: echo Deploy LunchMonkeys backend naar Render
+    displayName: "Deploy Backend Info"
+  
+  # Windows heeft curl.exe ingebouwd!
+  - script: |
+      echo Triggering backend deploy...
+      curl.exe -X POST "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk"
+    displayName: "Trigger Render Backend Deploy"
+    
+  - script: echo Deploy LunchMonkeys frontend naar Render
+    displayName: "Deploy Frontend Info"
+    
+  - script: |
+      echo Triggering frontend deploy...
+      curl.exe -X POST "https://api.render.com/deploy/srv-FRONTEND-ID?key=FRONTEND-KEY"
+    displayName: "Trigger Render Frontend Deploy"
