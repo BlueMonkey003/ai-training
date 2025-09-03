@@ -82,11 +82,15 @@ steps:
         
         Write-Host "`n✨ Mirror process completed!"
 
-  # Wait for GitHub to process
-  - script: |
-      echo ⏳ Waiting 5 seconds for GitHub to process push...
-      timeout /t 5
+  # Wait for GitHub to process - FIXED VERSION
+  - task: PowerShell@2
     displayName: "⏱️ Wait for GitHub"
+    inputs:
+      targetType: inline
+      script: |
+        Write-Host "⏳ Waiting 5 seconds for GitHub to process push..."
+        Start-Sleep -Seconds 5
+        Write-Host "✅ Continue with deployments..."
 
   # Deploy Backend
   - task: PowerShell@2
@@ -119,11 +123,14 @@ steps:
         }
 
   # Final status
-  - script: |
-      echo ╔════════════════════════════════════════════╗
-      echo ║   ✅ LunchMonkeys Deployment Complete!    ║
-      echo ╠════════════════════════════════════════════╣
-      echo ║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl
-      echo ║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl
-      echo ╚════════════════════════════════════════════╝
+  - task: PowerShell@2
     displayName: "✨ Deployment Summary"
+    inputs:
+      targetType: inline
+      script: |
+        Write-Host "╔════════════════════════════════════════════╗"
+        Write-Host "║   ✅ LunchMonkeys Deployment Complete!    ║"
+        Write-Host "╠════════════════════════════════════════════╣"
+        Write-Host "║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl"
+        Write-Host "║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl"
+        Write-Host "╚════════════════════════════════════════════╝"
