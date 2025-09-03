@@ -2,24 +2,128 @@ trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - backend/**
+      - frontend/**
+      - shared/**
 
 pool:
   name: Default
 
+variables:
+  - group: GitHubCredentials
+
 steps:
-  - script: echo Deploy LunchMonkeys backend naar Render
-    displayName: "Deploy Backend Info"
-  
-  # Windows heeft curl.exe ingebouwd!
+  # Mirror complete monorepo naar GitHub
+  - task: PowerShell@2
+    displayName: "📤 Mirror Monorepo to GitHub"
+    inputs:
+      targetType: inline
+      script: |
+        Write-Host "╔══════════════════════════════════════╗"
+        Write-Host "║     Starting GitHub Mirror Process   ║"
+        Write-Host "╚══════════════════════════════════════╝"
+        
+        # Clone repository
+        Write-Host "`n📥 Cloning repository..."
+        git clone --depth 5 https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application temp-repo
+        
+        if (-not $?) {
+            Write-Host "❌ Clone failed!"
+            exit 1
+        }
+        
+        cd temp-repo
+        
+        # Configure git
+        git config user.email "azure-pipeline@bluemonkeys.nl"
+        git config user.name "Azure Pipeline"
+        
+        # Verify structure
+        Write-Host "`n📁 Repository Structure:"
+        Get-ChildItem | Format-Table Name, Mode, LastWriteTime
+        
+        # Check backend
+        Write-Host "`n🔧 Backend Status:"
+        if (Test-Path "backend/package.json") {
+            $backendPkg = Get-Content backend/package.json | ConvertFrom-Json
+            Write-Host "✅ Backend found: $($backendPkg.name) v$($backendPkg.version)"
+        } else {
+            Write-Host "❌ Backend package.json not found!"
+            exit 1
+        }
+        
+        # Check frontend
+        Write-Host "`n🎨 Frontend Status:"
+        if (Test-Path "frontend/package.json") {
+            $frontendPkg = Get-Content frontend/package.json | ConvertFrom-Json
+            Write-Host "✅ Frontend found: $($frontendPkg.name) v$($frontendPkg.version)"
+        } else {
+            Write-Host "❌ Frontend package.json not found!"
+            exit 1
+        }
+        
+        # Push to GitHub
+        Write-Host "`n📤 Pushing to GitHub..."
+        git remote add github https://$(GITHUB_TOKEN)@github.com/BlueMonkey003/ai-training.git
+        git push github HEAD:main --force
+        
+        if ($?) {
+            Write-Host "✅ Successfully mirrored to GitHub!"
+        } else {
+            Write-Host "❌ Push to GitHub failed!"
+            exit 1
+        }
+        
+        # Cleanup
+        cd ..
+        Remove-Item -Recurse -Force temp-repo
+        
+        Write-Host "`n✨ Mirror process completed!"
+
+  # Wait for GitHub to process
   - script: |
-      echo Triggering backend deploy...
-      curl.exe -X POST "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk"
-    displayName: "Trigger Render Backend Deploy"
-    
-  - script: echo Deploy LunchMonkeys frontend naar Render
-    displayName: "Deploy Frontend Info"
-    
+      echo ⏳ Waiting 5 seconds for GitHub to process push...
+      timeout /t 5
+    displayName: "⏱️ Wait for GitHub"
+
+  # Deploy Backend
+  - task: PowerShell@2
+    displayName: "🔧 Deploy Backend to Render"
+    inputs:
+      targetType: inline
+      script: |
+        Write-Host "🚀 Triggering Backend Deploy..."
+        try {
+            $response = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk" -Method POST -UseBasicParsing
+            Write-Host "✅ Backend deploy triggered! Status: $($response.StatusCode)"
+        } catch {
+            Write-Host "❌ Backend deploy failed: $_"
+            exit 1
+        }
+
+  # Deploy Frontend
+  - task: PowerShell@2
+    displayName: "🎨 Deploy Frontend to Render"
+    inputs:
+      targetType: inline
+      script: |
+        Write-Host "🚀 Triggering Frontend Deploy..."
+        try {
+            $response = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs" -Method POST -UseBasicParsing
+            Write-Host "✅ Frontend deploy triggered! Status: $($response.StatusCode)"
+        } catch {
+            Write-Host "❌ Frontend deploy failed: $_"
+            exit 1
+        }
+
+  # Final status
   - script: |
-      echo Triggering frontend deploy...
-      curl.exe -X POST "https://api.render.com/deploy/srv-FRONTEND-ID?key=FRONTEND-KEY"
-    displayName: "Trigger Render Frontend Deploy"
+      echo ╔════════════════════════════════════════════╗
+      echo ║   ✅ LunchMonkeys Deployment Complete!    ║
+      echo ╠════════════════════════════════════════════╣
+      echo ║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl
+      echo ║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl
+      echo ╚════════════════════════════════════════════╝
+    displayName: "✨ Deployment Summary"
