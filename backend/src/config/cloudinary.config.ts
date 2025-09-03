@@ -3,7 +3,9 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.development";
+dotenv.config({ path: envFile });
 
 // Debug: Check if environment variables are loaded
 console.log('Cloudinary Config:', {

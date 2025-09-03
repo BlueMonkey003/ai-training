@@ -25,7 +25,11 @@ import { setupSocketHandlers } from "./sockets/socketHandlers";
 // Error middleware
 import { errorHandler } from "./middleware/error.middleware";
 
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.development";
+dotenv.config({ path: envFile });
+
+console.log("Loading environment from:", envFile);
 console.log("Loaded MONGO_URI:", process.env.MONGO_URI);
 console.log("Node environment:", process.env.NODE_ENV);
 
