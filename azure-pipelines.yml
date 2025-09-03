@@ -3,8 +3,12 @@ trigger:
     include:
       - main
 
+# Gebruik de self-hosted agent
 pool:
-  vmImage: ubuntu-latest
+  name: Default
+  # Optioneel: specifiek deze agent forceren
+  demands:
+    - agent.name -equals MyLocalAgent
 
 steps:
   - script: echo "Trigger backend deploy on Render"
