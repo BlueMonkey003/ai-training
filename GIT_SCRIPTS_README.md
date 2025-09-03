@@ -111,3 +111,4 @@ Voel je vrij om de scripts aan te passen naar je eigen workflow. Ze staan in:
 - `git-helper.ps1`
 - `quick-commit.ps1`
 - `git-flow.bat`
+
