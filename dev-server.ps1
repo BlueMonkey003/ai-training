@@ -436,6 +436,372 @@ function Show-GitStatus {
     }
 }
 
+function Create-PullRequest {
+    Write-Info "`n🔀 Azure DevOps Pull Request Wizard"
+    Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
+    
+    # Check git status eerst
+    $gitStatus = git status --porcelain 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Geen git repository gevonden"
+        return
+    }
+    
+    # Get current branch
+    $currentBranch = git branch --show-current
+    
+    if ($currentBranch -eq "main") {
+        Write-Warning "Je werkt direct op 'main' branch!"
+        Write-Info "Voor een PR moet je op een feature branch werken."
+        
+        $createBranch = Read-Host "`nWil je een nieuwe feature branch maken? (j/n)"
+        if ($createBranch -eq 'j') {
+            $branchName = Read-Host "Geef de branch naam (bijv. 'feature/nieuwe-functie')"
+            if ($branchName) {
+                git checkout -b $branchName
+                if ($?) {
+                    Write-Success "✅ Branch '$branchName' aangemaakt en geswitched"
+                    $currentBranch = $branchName
+                }
+                else {
+                    Write-Error "❌ Branch aanmaken mislukt"
+                    return
+                }
+            }
+            else {
+                Write-Error "Geen branch naam opgegeven"
+                return
+            }
+        }
+        else {
+            Write-Info "PR aanmaken geannuleerd - werk eerst op een feature branch"
+            return
+        }
+    }
+    
+    Write-Info "Current branch: $currentBranch"
+    
+    # Check uncommitted changes
+    if ($gitStatus) {
+        Write-Warning "`nEr zijn uncommitted changes:"
+        $gitStatus | ForEach-Object {
+            Write-Host "  - $_" -ForegroundColor Yellow
+        }
+        
+        $commitNow = Read-Host "`nWil je deze changes nu committen? (j/n)"
+        if ($commitNow -eq 'j') {
+            git add .
+            $commitMessage = Read-Host "Commit message"
+            if ($commitMessage) {
+                git commit -m $commitMessage
+                if ($?) {
+                    Write-Success "✅ Changes gecommit"
+                }
+                else {
+                    Write-Error "❌ Commit mislukt"
+                    return
+                }
+            }
+            else {
+                Write-Error "Geen commit message opgegeven"
+                return
+            }
+        }
+    }
+    
+    # Push branch naar origin
+    Write-Info "`n📤 Pushing branch naar Azure DevOps..."
+    git push -u origin $currentBranch
+    
+    if (-not $?) {
+        Write-Error "❌ Push mislukt. Controleer je connectie en rechten."
+        return
+    }
+    
+    Write-Success "✅ Branch gepusht naar Azure DevOps"
+    
+    # PR details verzamelen
+    Write-Host "`n📝 Pull Request Details:" -ForegroundColor Cyan
+    $prTitle = Read-Host "PR Titel"
+    if (-not $prTitle) {
+        $prTitle = "PR van $currentBranch naar main"
+    }
+    
+    $prDescription = Read-Host "PR Beschrijving (optioneel)"
+    if (-not $prDescription) {
+        $prDescription = "Automatisch gegenereerde PR vanaf development server"
+    }
+    
+    # Azure CLI check
+    try {
+        $azVersion = az --version 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Azure CLI niet gevonden"
+        }
+    }
+    catch {
+        Write-Warning "Azure CLI is niet geïnstalleerd of niet geconfigureerd"
+        Write-Info "`nOm automatisch een PR aan te maken heb je Azure CLI nodig:"
+        Write-Host "1. Installeer: https://aka.ms/installazurecliwindows" -ForegroundColor Cyan
+        Write-Host "2. Login: az login" -ForegroundColor Cyan
+        Write-Host "3. Set defaults: az devops configure --defaults organization=https://dev.azure.com/bluemonkeys123 project=AI-training" -ForegroundColor Cyan
+        
+        Write-Host "`n📋 Handmatige PR URL:" -ForegroundColor Green
+        Write-Host "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main" -ForegroundColor Yellow
+        
+        $openBrowser = Read-Host "`nWil je de browser openen om handmatig een PR aan te maken? (j/n)"
+        if ($openBrowser -eq 'j') {
+            Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main"
+        }
+        return
+    }
+    
+    # Probeer PR aan te maken met Azure CLI
+    Write-Info "`n🚀 PR aanmaken via Azure CLI..."
+    
+    try {
+        # Check of we ingelogd zijn
+        az account show 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Niet ingelogd in Azure CLI"
+            Write-Info "Voer uit: az login"
+            throw "Not logged in"
+        }
+        
+        # Create PR
+        $prCommand = @"
+az repos pr create `
+    --organization https://dev.azure.com/bluemonkeys123 `
+    --project "AI-training" `
+    --repository "AI-training-application" `
+    --source-branch "$currentBranch" `
+    --target-branch "main" `
+    --title "$prTitle" `
+    --description "$prDescription" `
+    --open
+"@
+        
+        Write-Host "`nUitvoeren commando:" -ForegroundColor Gray
+        Write-Host $prCommand -ForegroundColor Gray
+        
+        Invoke-Expression $prCommand
+        
+        if ($?) {
+            Write-Success "✅ Pull Request succesvol aangemaakt!"
+            Write-Info "De PR is geopend in je browser"
+        }
+        
+    }
+    catch {
+        Write-Warning "Automatisch aanmaken mislukt"
+        Write-Host "`n📋 Gebruik deze URL om handmatig een PR aan te maken:" -ForegroundColor Green
+        Write-Host "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main" -ForegroundColor Yellow
+        
+        $openBrowser = Read-Host "`nBrowser openen? (j/n)"
+        if ($openBrowser -eq 'j') {
+            Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main"
+        }
+    }
+}
+
+# Add function before Test-Dependencies
+function Create-PullRequest {
+    Write-Info "`n🔀 Azure DevOps Pull Request Wizard"
+    Write-Host "══════════════════════════════════════" -ForegroundColor Cyan
+    
+    # Check git status eerst
+    $gitStatus = git status --porcelain 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Geen git repository gevonden"
+        return
+    }
+    
+    # Get current branch
+    $currentBranch = git branch --show-current
+    
+    if ($currentBranch -eq "main") {
+        Write-Warning "Je werkt direct op 'main' branch!"
+        Write-Info "Voor een PR moet je op een feature branch werken."
+        
+        $createBranch = Read-Host "`nWil je een nieuwe feature branch maken? (j/n)"
+        if ($createBranch -eq 'j') {
+            $branchName = Read-Host "Geef de branch naam (bijv. 'feature/nieuwe-functie')"
+            if ($branchName) {
+                git checkout -b $branchName
+                if ($?) {
+                    Write-Success "✅ Branch '$branchName' aangemaakt en geswitched"
+                    $currentBranch = $branchName
+                }
+                else {
+                    Write-Error "❌ Branch aanmaken mislukt"
+                    return
+                }
+            }
+            else {
+                Write-Error "Geen branch naam opgegeven"
+                return
+            }
+        }
+        else {
+            Write-Info "PR aanmaken geannuleerd - werk eerst op een feature branch"
+            return
+        }
+    }
+    
+    Write-Info "Current branch: $currentBranch"
+    
+    # Check uncommitted changes
+    if ($gitStatus) {
+        Write-Warning "`nEr zijn uncommitted changes:"
+        $gitStatus | ForEach-Object {
+            Write-Host "  - $_" -ForegroundColor Yellow
+        }
+        
+        $commitNow = Read-Host "`nWil je deze changes nu committen? (j/n)"
+        if ($commitNow -eq 'j') {
+            git add .
+            $commitMessage = Read-Host "Commit message"
+            if ($commitMessage) {
+                git commit -m $commitMessage
+                if ($?) {
+                    Write-Success "✅ Changes gecommit"
+                }
+                else {
+                    Write-Error "❌ Commit mislukt"
+                    return
+                }
+            }
+            else {
+                Write-Error "Geen commit message opgegeven"
+                return
+            }
+        }
+    }
+    
+    # Push branch naar origin
+    Write-Info "`n📤 Pushing branch naar Azure DevOps..."
+    git push -u origin $currentBranch
+    
+    if (-not $?) {
+        Write-Error "❌ Push mislukt. Controleer je connectie en rechten."
+        return
+    }
+    
+    Write-Success "✅ Branch gepusht naar Azure DevOps"
+    
+    # PR details verzamelen
+    Write-Host "`n📝 Pull Request Details:" -ForegroundColor Cyan
+    $prTitle = Read-Host "PR Titel"
+    if (-not $prTitle) {
+        $prTitle = "PR van $currentBranch naar main"
+    }
+    
+    $prDescription = Read-Host "PR Beschrijving (optioneel)"
+    if (-not $prDescription) {
+        $prDescription = "Automatisch gegenereerde PR vanaf development server"
+    }
+    
+    # Azure CLI check
+    try {
+        $azVersion = az --version 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Azure CLI niet gevonden"
+        }
+    }
+    catch {
+        Write-Warning "Azure CLI is niet geïnstalleerd of niet geconfigureerd"
+        Write-Info "`nOm automatisch een PR aan te maken heb je Azure CLI nodig:"
+        Write-Host "1. Installeer: https://aka.ms/installazurecliwindows" -ForegroundColor Cyan
+        Write-Host "2. Login: az login" -ForegroundColor Cyan
+        Write-Host "3. Installeer extension: az extension add --name azure-devops" -ForegroundColor Cyan
+        Write-Host "4. Login DevOps: az devops login --organization https://dev.azure.com/bluemonkeys123" -ForegroundColor Cyan
+        Write-Host "5. Set defaults: az devops configure --defaults organization=https://dev.azure.com/bluemonkeys123 project=AI-training" -ForegroundColor Cyan
+        
+        Write-Host "`n📋 Handmatige PR URL:" -ForegroundColor Green
+        Write-Host "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main" -ForegroundColor Yellow
+        
+        $openBrowser = Read-Host "`nWil je de browser openen om handmatig een PR aan te maken? (j/n)"
+        if ($openBrowser -eq 'j') {
+            Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main"
+        }
+        return
+    }
+    
+    # Probeer PR aan te maken met Azure CLI
+    Write-Info "`n🚀 PR aanmaken via Azure CLI..."
+    
+    try {
+        # Check of we ingelogd zijn
+        az account show 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Niet ingelogd in Azure CLI"
+            Write-Info "Voer uit: az login"
+            
+            # Probeer DevOps login
+            Write-Info "`nProbeer ook: az devops login --organization https://dev.azure.com/bluemonkeys123"
+            throw "Not logged in"
+        }
+        
+        # Check of azure-devops extension is geïnstalleerd
+        $extensions = az extension list --query "[].name" -o tsv
+        if ($extensions -notcontains "azure-devops") {
+            Write-Warning "Azure DevOps extension niet geïnstalleerd"
+            Write-Info "Installeren..."
+            az extension add --name azure-devops
+            
+            if ($LASTEXITCODE -ne 0) {
+                throw "Extension install failed"
+            }
+        }
+        
+        # Create PR met correcte syntax
+        Write-Host "`nCreating Pull Request..." -ForegroundColor Cyan
+        
+        # Escape quotes in title en description voor JSON
+        $prTitleEscaped = $prTitle -replace '"', '\"'
+        $prDescriptionEscaped = $prDescription -replace '"', '\"'
+        
+        # Create PR
+        $prResult = az repos pr create `
+            --organization "https://dev.azure.com/bluemonkeys123" `
+            --project "AI-training" `
+            --repository "AI-training-application" `
+            --source-branch $currentBranch `
+            --target-branch "main" `
+            --title "$prTitleEscaped" `
+            --description "$prDescriptionEscaped" `
+            --open `
+            --output json
+        
+        if ($?) {
+            Write-Success "✅ Pull Request succesvol aangemaakt!"
+            
+            # Parse PR result voor ID
+            $prObject = $prResult | ConvertFrom-Json
+            if ($prObject.pullRequestId) {
+                Write-Info "PR ID: $($prObject.pullRequestId)"
+                Write-Info "URL: $($prObject.url)"
+            }
+            
+            Write-Info "De PR is geopend in je browser"
+        }
+        else {
+            throw "PR creation failed"
+        }
+        
+    }
+    catch {
+        Write-Warning "Automatisch aanmaken mislukt: $_"
+        Write-Host "`n📋 Gebruik deze URL om handmatig een PR aan te maken:" -ForegroundColor Green
+        Write-Host "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main" -ForegroundColor Yellow
+        
+        $openBrowser = Read-Host "`nBrowser openen? (j/n)"
+        if ($openBrowser -eq 'j') {
+            Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate?sourceRef=$currentBranch&targetRef=main"
+        }
+    }
+}
+
 function Test-Dependencies {
     Write-Info "`nDependencies controleren..."
     

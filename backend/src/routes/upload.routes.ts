@@ -1,31 +1,9 @@
 import { Router } from 'express';
 import { uploadProfileImage } from '../controllers/upload.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from '@fluidjs/multer-storage-cloudinary';
+import { uploadProfile } from '../config/cloudinary.config';
 
 const router = Router();
-
-// Create multer upload middleware with Cloudinary storage
-const profileStorage = new CloudinaryStorage({
-    cloudinary: cloudinary as any,
-    params: async (req: any, file: any) => {
-        return {
-            folder: 'lunchmonkeys/profiles',
-            allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-            transformation: [{ width: 500, height: 500, crop: 'limit' }],
-            public_id: `profile_${Date.now()}`,
-        };
-    },
-} as any);
-
-const uploadProfile = multer({
-    storage: profileStorage,
-    limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB max
-    },
-});
 
 /**
  * @swagger
@@ -68,4 +46,4 @@ const uploadProfile = multer({
  */
 router.post('/profile', authenticate, uploadProfile.single('image'), uploadProfileImage);
 
-export default router; 
+export default router;

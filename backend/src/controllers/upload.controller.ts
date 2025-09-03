@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { User } from '../models/User.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { ApiError } from '../middleware/error.middleware';
-import { cloudinary } from '../config/cloudinary.config';
+import { cloudinary, uploadToCloudinary } from '../config/cloudinary.config';
 
 export const uploadProfileImage = async (
     req: AuthRequest,
@@ -16,7 +16,12 @@ export const uploadProfileImage = async (
             throw error;
         }
 
-        const imageUrl = req.file.path; // Cloudinary URL
+        // Upload to Cloudinary
+        const imageUrl = await uploadToCloudinary(req.file, 'lunchmonkeys/profiles', {
+            width: 500,
+            height: 500,
+            crop: 'limit'
+        });
 
         // Verwijder oude profielfoto van Cloudinary
         if (req.user!.profileImageUrl) {
