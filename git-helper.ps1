@@ -20,8 +20,7 @@ function Show-Menu {
         Write-Host "📍 Branch: " -NoNewline -ForegroundColor Gray
         if ($currentBranch -eq "main") {
             Write-Host "$currentBranch" -ForegroundColor Red
-        }
-        else {
+        } else {
             Write-Host "$currentBranch" -ForegroundColor Green
         }
         
@@ -213,8 +212,7 @@ function Push-Changes {
                 return
             }
         }
-    }
-    else {
+    } else {
         Write-Error "❌ Push mislukt"
     }
     
@@ -233,8 +231,7 @@ function Pull-Changes {
     
     if ($?) {
         Write-Success "✅ Pull succesvol!"
-    }
-    else {
+    } else {
         Write-Error "❌ Pull mislukt - mogelijk merge conflicts"
     }
     
@@ -312,8 +309,7 @@ function Sync-WithMain {
     if ($currentBranch -eq "main") {
         Write-Warning "Je bent al op main branch!"
         git pull origin main
-    }
-    else {
+    } else {
         # Stash changes if needed
         $hasChanges = git status --porcelain
         if ($hasChanges) {
@@ -334,15 +330,13 @@ function Sync-WithMain {
         
         if ($choice -eq '2') {
             git rebase origin/main
-        }
-        else {
+        } else {
             git merge origin/main
         }
         
         if ($?) {
             Write-Success "✅ Sync succesvol!"
-        }
-        else {
+        } else {
             Write-Error "❌ Conflicts gevonden - los deze op en commit"
         }
         
@@ -368,8 +362,7 @@ function Delete-Branch {
     if ($branchName) {
         if ($branchName -eq "main") {
             Write-Error "❌ Kan main branch niet verwijderen!"
-        }
-        else {
+        } else {
             $deleteRemote = Read-Host "Ook van remote verwijderen? (j/n)"
             
             # Delete local
@@ -395,6 +388,20 @@ function Delete-Branch {
 function Create-PullRequest {
     Write-Host "`n🚀 CREATE PULL REQUEST - Azure DevOps" -ForegroundColor Yellow
     Write-Host "═══════════════════════════════════" -ForegroundColor DarkGray
+    
+    # CHECK VOOR AUTO-PR.PS1 EN GEBRUIK DAT ALS HET BESTAAT
+    $autoPrScript = Join-Path $PSScriptRoot "auto-pr.ps1"
+    if (Test-Path $autoPrScript) {
+        Write-Info "✨ Using automated PR script (auto-pr.ps1)..."
+        Write-Host ""
+        & $autoPrScript
+        Write-Host "`nDruk op een toets om door te gaan..."
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        return
+    }
+    
+    # FALLBACK: Oude methode als auto-pr.ps1 niet bestaat
+    Write-Warning "auto-pr.ps1 niet gevonden, gebruik browser-based PR creation..."
     
     # Check current branch
     $currentBranch = git rev-parse --abbrev-ref HEAD
@@ -456,91 +463,20 @@ function Create-PullRequest {
         $prDescription = "## Changes`n`n$commits"
     }
     
-    # Work items
-    $workItems = Read-Host "`nWork Item IDs (comma separated, optioneel)"
+    # Generate URL for manual creation
+    $encodedTitle = [System.Web.HttpUtility]::UrlEncode($prTitle)
+    $encodedDescription = [System.Web.HttpUtility]::UrlEncode($prDescription)
     
-    # Reviewers
-    Write-Host "`nReviewers toevoegen? (optioneel)" -ForegroundColor Cyan
-    Write-Host "Bijvoorbeeld: naam.achternaam@bluemonkeysit.nl"
-    $reviewers = Read-Host "Reviewers (comma separated)"
+    $prUrl = "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate" +
+             "?sourceRef=$currentBranch" +
+             "&targetRef=main" +
+             "&title=$encodedTitle" +
+             "&description=$encodedDescription"
     
-    # Try Azure CLI first
-    $useAzureCLI = $true
-    try {
-        $azCheck = az devops project list --organization https://dev.azure.com/bluemonkeys123 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            $useAzureCLI = $false
-        }
-    }
-    catch {
-        $useAzureCLI = $false
-    }
-    
-    if ($useAzureCLI) {
-        Write-Host "`n🔧 Creating PR via Azure CLI..." -ForegroundColor Cyan
-        
-        try {
-            # Build the command
-            $prCmd = "az repos pr create " +
-            "--organization `"https://dev.azure.com/bluemonkeys123`" " +
-            "--project `"AI-training`" " +
-            "--repository `"AI-training-application`" " +
-            "--source-branch `"$currentBranch`" " +
-            "--target-branch `"main`" " +
-            "--title `"$prTitle`" " +
-            "--description `"$prDescription`" " +
-            "--open"
-            
-            # Add work items if provided
-            if ($workItems) {
-                $prCmd += " --work-items $workItems"
-            }
-            
-            # Add reviewers if provided
-            if ($reviewers) {
-                $prCmd += " --reviewers $reviewers"
-            }
-            
-            # Execute
-            $prResult = Invoke-Expression $prCmd | ConvertFrom-Json
-            
-            if ($prResult) {
-                Write-Success "✅ Pull Request succesvol aangemaakt!"
-                Write-Info "PR ID: #$($prResult.pullRequestId)"
-                Write-Info "Status: $($prResult.status)"
-                Write-Info "URL: $($prResult.url)"
-                Write-Success "`n🌐 Browser wordt geopend..."
-            }
-            
-        }
-        catch {
-            Write-Warning "Azure CLI PR creation failed, falling back to manual..."
-            $useAzureCLI = $false
-        }
-    }
-    
-    if (-not $useAzureCLI) {
-        # Fallback: Generate URL for manual creation
-        Write-Warning "Azure CLI niet beschikbaar - manual PR creation"
-        
-        $encodedTitle = [System.Web.HttpUtility]::UrlEncode($prTitle)
-        $encodedDescription = [System.Web.HttpUtility]::UrlEncode($prDescription)
-        
-        $prUrl = "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate" +
-        "?sourceRef=$currentBranch" +
-        "&targetRef=main" +
-        "&title=$encodedTitle" +
-        "&description=$encodedDescription"
-        
-        if ($workItems) {
-            $prUrl += "&workItemIds=$workItems"
-        }
-        
-        Write-Host "`n📋 Opening browser voor manual PR creation..." -ForegroundColor Green
-        Write-Info "Titel en beschrijving zijn vooringevuld"
-        Start-Process $prUrl
-        Write-Success "✅ Browser geopend - complete de PR daar"
-    }
+    Write-Host "`n📋 Opening browser voor PR creation..." -ForegroundColor Green
+    Write-Info "Titel en beschrijving zijn vooringevuld"
+    Start-Process $prUrl
+    Write-Success "✅ Browser geopend - klik 'Create' om de PR aan te maken"
     
     Write-Host "`nDruk op een toets om door te gaan..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -550,43 +486,10 @@ function Show-PullRequests {
     Write-Host "`n📋 Open Pull Requests" -ForegroundColor Yellow
     Write-Host "═══════════════════════════════════" -ForegroundColor DarkGray
     
-    try {
-        Write-Info "Fetching PRs from Azure DevOps..."
-        
-        $prs = az repos pr list `
-            --organization "https://dev.azure.com/bluemonkeys123" `
-            --project "AI-training" `
-            --repository "AI-training-application" `
-            --status "active" `
-            --output json | ConvertFrom-Json
-        
-        if ($prs.Count -eq 0) {
-            Write-Warning "Geen open PRs gevonden"
-        }
-        else {
-            Write-Success "Found $($prs.Count) open PR(s):`n"
-            
-            foreach ($pr in $prs) {
-                Write-Host "PR #$($pr.pullRequestId): " -NoNewline -ForegroundColor Cyan
-                Write-Host "$($pr.title)"
-                Write-Host "  Branch: $($pr.sourceRefName -replace 'refs/heads/', '') → $($pr.targetRefName -replace 'refs/heads/', '')" -ForegroundColor Gray
-                Write-Host "  Author: $($pr.createdBy.displayName)" -ForegroundColor Gray
-                Write-Host "  Created: $($pr.creationDate)" -ForegroundColor Gray
-                Write-Host "  URL: https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequest/$($pr.pullRequestId)" -ForegroundColor Blue
-                Write-Host ""
-            }
-        }
-        
-        $openBrowser = Read-Host "Open PR lijst in browser? (j/n)"
-        if ($openBrowser -eq 'j') {
-            Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequests"
-        }
-        
-    }
-    catch {
-        Write-Warning "Azure CLI niet beschikbaar - opening browser..."
-        Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequests"
-    }
+    Write-Warning "Deze functie vereist Azure CLI (niet geïnstalleerd)"
+    Write-Info "Opening browser met PR lijst..."
+    
+    Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequests"
     
     Write-Host "`nDruk op een toets om door te gaan..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -599,56 +502,11 @@ function Check-PRStatus {
     $currentBranch = git rev-parse --abbrev-ref HEAD
     Write-Info "Huidige branch: $currentBranch"
     
-    try {
-        $pr = az repos pr list `
-            --organization "https://dev.azure.com/bluemonkeys123" `
-            --project "AI-training" `
-            --repository "AI-training-application" `
-            --source-branch $currentBranch `
-            --output json | ConvertFrom-Json | Select-Object -First 1
-        
-        if ($pr) {
-            Write-Success "✅ PR gevonden voor deze branch!"
-            Write-Host "`nPR #$($pr.pullRequestId): $($pr.title)" -ForegroundColor Cyan
-            Write-Host "Status: $($pr.status)" -ForegroundColor $(if ($pr.status -eq "completed") { "Green" }else { "Yellow" })
-            Write-Host "Created: $($pr.creationDate)"
-            Write-Host "Merge status: $($pr.mergeStatus)"
-            
-            if ($pr.reviewers) {
-                Write-Host "`nReviewers:" -ForegroundColor Cyan
-                foreach ($reviewer in $pr.reviewers) {
-                    $vote = switch ($reviewer.vote) {
-                        10 { "✅ Approved" }
-                        5 { "✓ Approved with suggestions" }
-                        0 { "⏳ No vote" }
-                        -5 { "⚠️ Waiting for author" }
-                        -10 { "❌ Rejected" }
-                        default { "Unknown" }
-                    }
-                    Write-Host "  $($reviewer.displayName): $vote"
-                }
-            }
-            
-            Write-Host "`nURL: https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequest/$($pr.pullRequestId)" -ForegroundColor Blue
-            
-            $openPR = Read-Host "`nOpen PR in browser? (j/n)"
-            if ($openPR -eq 'j') {
-                Start-Process "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequest/$($pr.pullRequestId)"
-            }
-        }
-        else {
-            Write-Warning "Geen PR gevonden voor branch: $currentBranch"
-            $createNow = Read-Host "Wil je nu een PR aanmaken? (j/n)"
-            if ($createNow -eq 'j') {
-                Create-PullRequest
-                return
-            }
-        }
-    }
-    catch {
-        Write-Warning "Azure CLI niet beschikbaar"
-        Write-Info "Check manual: https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequests"
-    }
+    Write-Warning "Deze functie vereist Azure CLI (niet geïnstalleerd)"
+    Write-Info "Check manual in browser..."
+    
+    $prUrl = "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequests?_a=mine"
+    Start-Process $prUrl
     
     Write-Host "`nDruk op een toets om door te gaan..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -661,16 +519,14 @@ function Stash-Changes {
     $changes = git status --porcelain
     if (-not $changes) {
         Write-Warning "Geen wijzigingen om te stashen"
-    }
-    else {
+    } else {
         Write-Host "Te stashen wijzigingen:" -ForegroundColor Cyan
         git status --short
         
         $message = Read-Host "`nStash beschrijving (optioneel)"
         if ($message) {
             git stash push -m "$message"
-        }
-        else {
+        } else {
             git stash push
         }
         
@@ -693,8 +549,7 @@ function Apply-Stash {
     $stashList = git stash list
     if (-not $stashList) {
         Write-Warning "Geen stashes beschikbaar"
-    }
-    else {
+    } else {
         Write-Host "Beschikbare stashes:" -ForegroundColor Cyan
         git stash list | ForEach-Object {
             Write-Host "  $_"
@@ -709,16 +564,14 @@ function Apply-Stash {
         
         if ($stashIndex -ne '') {
             if ($action -eq '2') {
-                git stash pop "stash@`{$stashIndex`}"
-            }
-            else {
-                git stash apply "stash@`{$stashIndex`}"
+                git stash pop "stash@{$stashIndex}"
+            } else {
+                git stash apply "stash@{$stashIndex}"
             }
             
             if ($?) {
                 Write-Success "✅ Stash toegepast!"
-            }
-            else {
+            } else {
                 Write-Error "❌ Mogelijk conflicts - check git status"
             }
         }
@@ -818,8 +671,7 @@ function Quick-Deploy {
         
         Write-Info "3️⃣ Creating PR..."
         Create-PullRequest
-    }
-    else {
+    } else {
         Write-Error "❌ Push failed - check git status"
         Write-Host "`nDruk op een toets om door te gaan..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
