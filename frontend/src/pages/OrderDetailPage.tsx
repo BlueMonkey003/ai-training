@@ -9,7 +9,7 @@ import { Label } from '../components/ui/label';
 import { useAuth } from '../contexts/AuthContext';
 import socketService from '../services/socket';
 import toast from 'react-hot-toast';
-import { ShoppingCart, Edit2, Trash2, X, Check, Clock } from 'lucide-react';
+import { ShoppingCart, Edit2, Trash2, X, Clock } from 'lucide-react';
 
 export default function OrderDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -46,16 +46,16 @@ export default function OrderDetailPage() {
                 setItems(prev => prev.map(item =>
                     item._id === data.item!._id ? data.item! : item
                 ));
-                toast.info('Bestelling bijgewerkt');
+                toast('Bestelling bijgewerkt', { icon: 'ℹ️' });
             } else if (data.type === 'item_deleted' && data.itemId) {
                 setItems(prev => prev.filter(item => item._id !== data.itemId));
-                toast.info('Bestelling verwijderd');
+                toast('Bestelling verwijderd', { icon: 'ℹ️' });
             }
         });
 
         socketService.onOrderClosed(() => {
             setOrder(prev => prev ? { ...prev, status: 'closed' } : null);
-            toast.info('Bestelling is gesloten');
+            toast('Bestelling is gesloten', { icon: 'ℹ️' });
         });
 
         return () => {

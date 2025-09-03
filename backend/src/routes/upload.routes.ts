@@ -3,7 +3,7 @@ import { uploadProfileImage } from '../controllers/upload.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { CloudinaryStorage } from '@fluidjs/multer-storage-cloudinary';
 
 const router = Router();
 

@@ -4,7 +4,7 @@ import { orderApi, restaurantApi } from '../services/api';
 import type { Order, Restaurant } from '../../../shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Clock, MapPin, ExternalLink, Plus } from 'lucide-react';
+import { Clock, ExternalLink, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import socketService from '../services/socket';
 import toast from 'react-hot-toast';
@@ -28,7 +28,7 @@ export default function DashboardPage() {
         // Luister naar order closed
         socketService.onOrderClosed(() => {
             setActiveOrder(null);
-            toast.info('De lunch bestelling is gesloten');
+            toast('De lunch bestelling is gesloten', { icon: 'ℹ️' });
             fetchData();
         });
 

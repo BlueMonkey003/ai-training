@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Notification } from '../../../shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Bell, BellOff, Check, CheckCheck } from 'lucide-react';
+import { BellOff, Check, CheckCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function NotificationsPage() {
