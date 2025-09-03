@@ -20,29 +20,100 @@ jobs:
     clean: all  # Ruimt workspace op voor elke run
   
   steps:
-    # Check system resources en cleanup oude runs
+    # Uitgebreide diagnostiek
     - task: PowerShell@2
-      displayName: "📊 Check Resources & Cleanup"
+      displayName: "🔍 Deep System Diagnostics"
       inputs:
         targetType: inline
         script: |
-          Write-Host "📊 Checking system resources..."
-          $mem = Get-CimInstance Win32_OperatingSystem
-          $percentUsed = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / $mem.TotalVisibleMemorySize * 100, 2)
-          Write-Host "Memory usage before start: $percentUsed%"
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "            SYSTEM DIAGNOSTICS"
+          Write-Host "════════════════════════════════════════════════"
           
-          # Cleanup ALLE oude temp-repo folders in work directory
-          Write-Host "`n🧹 Cleaning up old temporary folders..."
-          $workDir = "$(Agent.WorkFolder)"
-          Get-ChildItem -Path $workDir -Filter "temp-repo*" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-              Write-Host "Removing old folder: $($_.FullName)"
-              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
-          }
+          # Systeem info
+          $os = Get-CimInstance Win32_OperatingSystem
+          $totalRAM = [math]::Round($os.TotalVisibleMemorySize / 1024 / 1024, 2)
+          $freeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
+          $usedRAM = $totalRAM - $freeRAM
+          $percentUsed = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
           
-          # Ook in huidige directory voor de zekerheid
-          if (Test-Path "temp-repo") {
-              Write-Host "Removing temp-repo in current directory"
-              Remove-Item -Recurse -Force temp-repo -ErrorAction SilentlyContinue
+          Write-Host "`n📊 MEMORY STATUS:"
+          Write-Host "Total RAM: $totalRAM GB"
+          Write-Host "Used RAM: $usedRAM GB ($percentUsed%)"
+          Write-Host "Free RAM: $freeRAM GB"
+          
+          if ($percentUsed -gt 90) {
+              Write-Host "`n⚠️ CRITICAL: Memory usage is above 90%!"
+              
+              # Top 10 processen qua geheugengebruik
+              Write-Host "`n🔝 TOP 10 MEMORY CONSUMERS:"
+              Get-Process | Sort-Object WS -Descending | Select-Object -First 10 | ForEach-Object {
+                  $memMB = [math]::Round($_.WS / 1MB, 2)
+                  Write-Host "$($_.ProcessName): $memMB MB"
+              }
+              
+              # Check voor Azure DevOps agent processen
+              Write-Host "`n🔍 AZURE DEVOPS PROCESSES:"
+              Get-Process | Where-Object {$_.ProcessName -like "*Agent*" -or $_.ProcessName -like "*vsts*" -or $_.ProcessName -like "*worker*"} | ForEach-Object {
+                  $memMB = [math]::Round($_.WS / 1MB, 2)
+                  Write-Host "$($_.ProcessName) [PID: $($_.Id)]: $memMB MB"
+              }
+              
+              # Check git processen
+              Write-Host "`n🔍 GIT PROCESSES:"
+              Get-Process | Where-Object {$_.ProcessName -like "*git*"} | ForEach-Object {
+                  $memMB = [math]::Round($_.WS / 1MB, 2)
+                  Write-Host "$($_.ProcessName) [PID: $($_.Id)]: $memMB MB"
+              }
+              
+              # Agent work folder grootte
+              Write-Host "`n📁 AGENT WORK FOLDER SIZE:"
+              $workFolder = "$(Agent.WorkFolder)"
+              if (Test-Path $workFolder) {
+                  $size = (Get-ChildItem $workFolder -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                  $sizeGB = [math]::Round($size / 1GB, 2)
+                  Write-Host "Total size: $sizeGB GB"
+                  
+                  # Grootste folders
+                  Write-Host "`nLargest folders in work directory:"
+                  Get-ChildItem $workFolder -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                      $folderSize = (Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                      $folderSizeMB = [math]::Round($folderSize / 1MB, 2)
+                      if ($folderSizeMB -gt 10) {
+                          Write-Host "$($_.Name): $folderSizeMB MB"
+                      }
+                  }
+              }
+              
+              # Probeer geheugen vrij te maken
+              Write-Host "`n🧹 ATTEMPTING MEMORY CLEANUP..."
+              
+              # Clear Windows working set
+              Write-Host "Clearing Windows working sets..."
+              [System.Diagnostics.Process]::GetCurrentProcess().MinWorkingSet = [IntPtr]::new(5)
+              
+              # Force garbage collection
+              [System.GC]::Collect()
+              [System.GC]::WaitForPendingFinalizers()
+              [System.GC]::Collect()
+              
+              # Check opnieuw
+              Start-Sleep -Seconds 2
+              $os = Get-CimInstance Win32_OperatingSystem
+              $newFreeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
+              $newPercentUsed = [math]::Round((($totalRAM - $newFreeRAM) / $totalRAM) * 100, 2)
+              Write-Host "`nMemory after cleanup: $newPercentUsed%"
+              
+              if ($newPercentUsed -gt 90) {
+                  Write-Host "`n❌ Memory usage still critical. Consider:"
+                  Write-Host "1. Restart the agent service"
+                  Write-Host "2. Add more RAM to the agent machine"
+                  Write-Host "3. Move agent to another machine"
+                  Write-Host "4. Check for memory leaks in other applications"
+                  
+                  # Optioneel: stop de pipeline
+                  # exit 1
+              }
           }
     
     # Mirror complete monorepo naar GitHub met betere error handling
