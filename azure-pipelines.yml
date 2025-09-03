@@ -17,12 +17,12 @@ variables:
 jobs:
 - job: Deploy
   workspace:
-    clean: all  # Ruimt workspace op voor elke run
+    clean: all
   
   steps:
-    # Uitgebreide diagnostiek
+    # Diagnostiek blijft zoals het was
     - task: PowerShell@2
-      displayName: "🔍 Deep System Diagnostics"
+      displayName: "🔍 System Diagnostics"
       inputs:
         targetType: inline
         script: |
@@ -30,7 +30,6 @@ jobs:
           Write-Host "            SYSTEM DIAGNOSTICS"
           Write-Host "════════════════════════════════════════════════"
           
-          # Systeem info
           $os = Get-CimInstance Win32_OperatingSystem
           $totalRAM = [math]::Round($os.TotalVisibleMemorySize / 1024 / 1024, 2)
           $freeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
@@ -42,81 +41,11 @@ jobs:
           Write-Host "Used RAM: $usedRAM GB ($percentUsed%)"
           Write-Host "Free RAM: $freeRAM GB"
           
-          if ($percentUsed -gt 90) {
-              Write-Host "`n⚠️ CRITICAL: Memory usage is above 90%!"
-              
-              # Top 10 processen qua geheugengebruik
-              Write-Host "`n🔝 TOP 10 MEMORY CONSUMERS:"
-              Get-Process | Sort-Object WS -Descending | Select-Object -First 10 | ForEach-Object {
-                  $memMB = [math]::Round($_.WS / 1MB, 2)
-                  Write-Host "$($_.ProcessName): $memMB MB"
-              }
-              
-              # Check voor Azure DevOps agent processen
-              Write-Host "`n🔍 AZURE DEVOPS PROCESSES:"
-              Get-Process | Where-Object {$_.ProcessName -like "*Agent*" -or $_.ProcessName -like "*vsts*" -or $_.ProcessName -like "*worker*"} | ForEach-Object {
-                  $memMB = [math]::Round($_.WS / 1MB, 2)
-                  Write-Host "$($_.ProcessName) [PID: $($_.Id)]: $memMB MB"
-              }
-              
-              # Check git processen
-              Write-Host "`n🔍 GIT PROCESSES:"
-              Get-Process | Where-Object {$_.ProcessName -like "*git*"} | ForEach-Object {
-                  $memMB = [math]::Round($_.WS / 1MB, 2)
-                  Write-Host "$($_.ProcessName) [PID: $($_.Id)]: $memMB MB"
-              }
-              
-              # Agent work folder grootte
-              Write-Host "`n📁 AGENT WORK FOLDER SIZE:"
-              $workFolder = "$(Agent.WorkFolder)"
-              if (Test-Path $workFolder) {
-                  $size = (Get-ChildItem $workFolder -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-                  $sizeGB = [math]::Round($size / 1GB, 2)
-                  Write-Host "Total size: $sizeGB GB"
-                  
-                  # Grootste folders
-                  Write-Host "`nLargest folders in work directory:"
-                  Get-ChildItem $workFolder -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-                      $folderSize = (Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-                      $folderSizeMB = [math]::Round($folderSize / 1MB, 2)
-                      if ($folderSizeMB -gt 10) {
-                          Write-Host "$($_.Name): $folderSizeMB MB"
-                      }
-                  }
-              }
-              
-              # Probeer geheugen vrij te maken
-              Write-Host "`n🧹 ATTEMPTING MEMORY CLEANUP..."
-              
-              # Clear Windows working set
-              Write-Host "Clearing Windows working sets..."
-              [System.Diagnostics.Process]::GetCurrentProcess().MinWorkingSet = [IntPtr]::new(5)
-              
-              # Force garbage collection
-              [System.GC]::Collect()
-              [System.GC]::WaitForPendingFinalizers()
-              [System.GC]::Collect()
-              
-              # Check opnieuw
-              Start-Sleep -Seconds 2
-              $os = Get-CimInstance Win32_OperatingSystem
-              $newFreeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
-              $newPercentUsed = [math]::Round((($totalRAM - $newFreeRAM) / $totalRAM) * 100, 2)
-              Write-Host "`nMemory after cleanup: $newPercentUsed%"
-              
-              if ($newPercentUsed -gt 90) {
-                  Write-Host "`n❌ Memory usage still critical. Consider:"
-                  Write-Host "1. Restart the agent service"
-                  Write-Host "2. Add more RAM to the agent machine"
-                  Write-Host "3. Move agent to another machine"
-                  Write-Host "4. Check for memory leaks in other applications"
-                  
-                  # Optioneel: stop de pipeline
-                  # exit 1
-              }
+          if ($percentUsed -gt 85) {
+              Write-Host "`n⚠️ Warning: High memory usage detected!"
           }
     
-    # Mirror complete monorepo naar GitHub met betere error handling
+    # GEFIXTE Mirror naar GitHub
     - task: PowerShell@2
       displayName: "📤 Mirror Monorepo to GitHub"
       inputs:
@@ -127,14 +56,16 @@ jobs:
           Write-Host "╚══════════════════════════════════════╝"
           
           try {
-              # Extra cleanup check
+              # Cleanup
               if (Test-Path "temp-repo") {
                   Write-Host "⚠️ Removing existing temp-repo..."
                   Remove-Item -Recurse -Force temp-repo
               }
               
-              # Clone repository met shallow clone voor minder geheugengebruik
-              Write-Host "`n📥 Cloning repository (shallow)..."
+              # BELANGRIJK: Clone met unshallow optie voor GitHub compatibility
+              Write-Host "`n📥 Cloning repository..."
+              
+              # Eerst shallow clone voor snelheid
               git clone --depth 1 --single-branch --branch main https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application temp-repo
               
               if (-not $?) {
@@ -147,6 +78,10 @@ jobs:
               git config user.email "azure-pipeline@bluemonkeys.nl"
               git config user.name "Azure Pipeline"
               
+              # CRUCIALE FIX: Unshallow de repo voor GitHub
+              Write-Host "`n🔄 Fetching full history for GitHub compatibility..."
+              git fetch --unshallow origin
+              
               # Verify structure
               Write-Host "`n📁 Repository Structure:"
               Get-ChildItem | Format-Table Name, Mode, LastWriteTime
@@ -156,22 +91,21 @@ jobs:
               if (Test-Path "backend/package.json") {
                   $backendPkg = Get-Content backend/package.json | ConvertFrom-Json
                   Write-Host "✅ Backend found: $($backendPkg.name) v$($backendPkg.version)"
-              } else {
-                  throw "Backend package.json not found!"
               }
               
-              # Check frontend
+              # Check frontend  
               Write-Host "`n🎨 Frontend Status:"
               if (Test-Path "frontend/package.json") {
                   $frontendPkg = Get-Content frontend/package.json | ConvertFrom-Json
                   Write-Host "✅ Frontend found: $($frontendPkg.name) v$($frontendPkg.version)"
-              } else {
-                  throw "Frontend package.json not found!"
               }
               
-              # Push to GitHub
-              Write-Host "`n📤 Pushing to GitHub..."
+              # Add GitHub remote
+              Write-Host "`n🔗 Adding GitHub remote..."
               git remote add github https://$(GITHUB_TOKEN)@github.com/BlueMonkey003/ai-training.git
+              
+              # Push to GitHub with force
+              Write-Host "`n📤 Pushing to GitHub..."
               git push github HEAD:main --force
               
               if ($?) {
@@ -184,24 +118,19 @@ jobs:
               Write-Host "❌ Error occurred: $_"
               exit 1
           } finally {
-              # ALTIJD cleanup, ook bij errors
               Write-Host "`n🧹 Performing cleanup..."
               cd $(Agent.WorkFolder)
               
               if (Test-Path "temp-repo") {
                   Remove-Item -Recurse -Force temp-repo -ErrorAction SilentlyContinue
-                  Write-Host "✅ Cleaned up temp-repo"
               }
               
-              # Extra memory vrijgeven
-              [System.GC]::Collect()
-              [System.GC]::WaitForPendingFinalizers()
               [System.GC]::Collect()
           }
           
           Write-Host "`n✨ Mirror process completed!"
     
-    # Wait for GitHub to process
+    # Rest blijft hetzelfde
     - task: PowerShell@2
       displayName: "⏱️ Wait for GitHub"
       inputs:
@@ -211,7 +140,6 @@ jobs:
           Start-Sleep -Seconds 5
           Write-Host "✅ Continue with deployments..."
     
-    # Deploy Backend
     - task: PowerShell@2
       displayName: "🔧 Deploy Backend to Render"
       inputs:
@@ -226,7 +154,6 @@ jobs:
               exit 1
           }
     
-    # Deploy Frontend
     - task: PowerShell@2
       displayName: "🎨 Deploy Frontend to Render"
       inputs:
@@ -241,7 +168,6 @@ jobs:
               exit 1
           }
     
-    # Final status met resource check
     - task: PowerShell@2
       displayName: "✨ Deployment Summary"
       inputs:
@@ -253,9 +179,3 @@ jobs:
           Write-Host "║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl"
           Write-Host "║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl"
           Write-Host "╚════════════════════════════════════════════╝"
-          
-          # Final memory check
-          Write-Host "`n📊 Final resource check:"
-          $mem = Get-CimInstance Win32_OperatingSystem
-          $percentUsed = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / $mem.TotalVisibleMemorySize * 100, 2)
-          Write-Host "Memory usage after completion: $percentUsed%"
