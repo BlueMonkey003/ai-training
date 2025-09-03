@@ -1,7 +1,8 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from '@fluidjs/multer-storage-cloudinary';
 import multer from 'multer';
+import { Request } from 'express';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables based on NODE_ENV
 const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.development";
@@ -20,43 +21,73 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Function to create storage after config is loaded
-const createProfileStorage = () => new CloudinaryStorage({
-    cloudinary: cloudinary as any,
-    params: async (req: any, file: any) => {
-        return {
-            folder: 'lunchmonkeys/profiles',
-            allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-            transformation: [{ width: 500, height: 500, crop: 'limit' }],
-            public_id: `profile_${Date.now()}`,
-        };
-    },
-} as any);
-
-const createRestaurantStorage = () => new CloudinaryStorage({
-    cloudinary: cloudinary as any,
-    params: async (req: any, file: any) => {
-        return {
-            folder: 'lunchmonkeys/restaurants',
-            allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-            transformation: [{ width: 1200, height: 800, crop: 'limit' }],
-            public_id: `restaurant_${Date.now()}`,
-        };
-    },
-} as any);
+// Memory storage for multer - we'll upload to Cloudinary in the controller
+const storage = multer.memoryStorage();
 
 export const uploadProfile = multer({
-    storage: createProfileStorage(),
+    storage: storage,
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB max
+    },
+    fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+        const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedFormats.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file format. Only JPG, JPEG, PNG and WEBP are allowed.'));
+        }
     },
 });
 
 export const uploadRestaurant = multer({
-    storage: createRestaurantStorage(),
+    storage: storage,
     limits: {
         fileSize: 10 * 1024 * 1024, // 10MB max
     },
+    fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+        const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedFormats.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file format. Only JPG, JPEG, PNG and WEBP are allowed.'));
+        }
+    },
 });
 
-export { cloudinary }; 
+// Helper function to upload to Cloudinary
+export const uploadToCloudinary = async (
+    file: Express.Multer.File,
+    folder: string,
+    options?: {
+        width?: number;
+        height?: number;
+        crop?: string;
+    }
+): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const uploadOptions: any = {
+            folder: folder,
+            resource_type: 'image',
+            public_id: `${path.parse(file.originalname).name}_${Date.now()}`,
+        };
+
+        if (options) {
+            uploadOptions.transformation = [options];
+        }
+
+        const uploadStream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error, result) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(result!.secure_url);
+                }
+            }
+        );
+
+        uploadStream.end(file.buffer);
+    });
+};
+
+export { cloudinary };

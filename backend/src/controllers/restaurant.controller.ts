@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Restaurant } from '../models/Restaurant.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { ApiError } from '../middleware/error.middleware';
-import { cloudinary } from '../config/cloudinary.config';
+import { cloudinary, uploadToCloudinary } from '../config/cloudinary.config';
 
 export const getRestaurants = async (
     req: Request,
@@ -38,9 +38,16 @@ export const createRestaurant = async (
             throw error;
         }
 
+        // Upload image to Cloudinary
+        const imageUrl = await uploadToCloudinary(req.file, 'lunchmonkeys/restaurants', {
+            width: 1200,
+            height: 800,
+            crop: 'limit'
+        });
+
         const restaurant = await Restaurant.create({
             name,
-            imageUrl: req.file.path, // Cloudinary URL
+            imageUrl,
             websiteUrl,
             menuUrl,
             createdBy: req.user!._id,
@@ -66,7 +73,12 @@ export const updateRestaurant = async (
 
         // Als er een nieuwe afbeelding is geupload
         if (req.file) {
-            updateData.imageUrl = req.file.path;
+            // Upload nieuwe afbeelding
+            updateData.imageUrl = await uploadToCloudinary(req.file, 'lunchmonkeys/restaurants', {
+                width: 1200,
+                height: 800,
+                crop: 'limit'
+            });
 
             // Verwijder oude afbeelding van Cloudinary
             const restaurant = await Restaurant.findById(id);
