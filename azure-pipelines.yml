@@ -62,8 +62,8 @@ jobs:
           
           Write-Host "[DEBUG] Commit message: $commitMessage"
           
-          # Check of dit een PR merge is
-          $isPRMerge = $commitMessage -match "Merged PR #\d+"
+          # Check of dit een PR merge is (met of zonder # voor PR nummer)
+          $isPRMerge = $commitMessage -match "Merged PR #?\d+"
           if ($isPRMerge) {
               Write-Host "[INFO] Detected PR merge"
               # Probeer branch naam uit PR merge commit te halen
@@ -78,18 +78,38 @@ jobs:
           # Detecteer type uit commit message of branch
           $commitType = ""
           
+          # Voor PR merges, check in het deel na "Merged PR:"
+          $messageToCheck = $commitMessage
+          if ($isPRMerge) {
+              # Extract het deel na "Merged PR #: " of "Merged PR 15: "
+              $prTitleMatch = $commitMessage -match 'Merged PR #?\d+:\s*(.+)$'
+              if ($prTitleMatch) {
+                  $messageToCheck = $matches[1].Trim()
+                  Write-Host "[DEBUG] PR title: $messageToCheck"
+              }
+          }
+          
           # Check voor conventional commit format
-          $conventionalMatch = $commitMessage -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:'
+          $conventionalMatch = $messageToCheck -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:'
           if ($conventionalMatch) {
               $commitType = $matches[1]
               Write-Host "[TYPE] Conventional commit type: $commitType"
           }
           else {
               # Check voor emoji-based format (uit auto-pr.ps1)
-              $emojiMatch = $commitMessage -match '^[^\s]+ (feat|fix|chore):'
+              # Match emoji gevolgd door type: bv "✨ feat:" of "🔧 fix:"
+              $emojiMatch = $messageToCheck -match '^[^\s]+ (feat|fix|chore):'
               if ($emojiMatch) {
                   $commitType = $matches[1]
                   Write-Host "[TYPE] Emoji commit type: $commitType"
+              }
+              else {
+                  # Fallback: zoek overal in de message naar type keywords
+                  $fallbackMatch = $messageToCheck -match '\b(feat|fix|chore)\b'
+                  if ($fallbackMatch) {
+                      $commitType = $matches[1]
+                      Write-Host "[TYPE] Fallback type detection: $commitType"
+                  }
               }
           }
           
