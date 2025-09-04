@@ -9,6 +9,8 @@ import RestaurantsPage from './pages/RestaurantsPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import SettingsPage from './pages/SettingsPage';
+import UserManagementPage from './pages/UserManagementPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -67,6 +69,18 @@ function AppRoutes() {
           <PrivateRoute>
             <NotificationsPage />
           </PrivateRoute>
+        } />
+
+        <Route path="/settings" element={
+          <PrivateRoute>
+            <SettingsPage />
+          </PrivateRoute>
+        } />
+
+        <Route path="/users" element={
+          <AdminRoute>
+            <UserManagementPage />
+          </AdminRoute>
         } />
       </Route>
     </Routes>

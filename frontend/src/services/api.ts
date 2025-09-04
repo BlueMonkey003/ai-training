@@ -48,6 +48,27 @@ export const userApi = {
         const response = await api.patch<{ success: boolean; user: User }>(`/users/${id}`, data);
         return response.data;
     },
+
+    // Admin endpoints
+    getAll: async (params?: { active?: boolean; role?: string }) => {
+        const response = await api.get<{ success: boolean; users: User[] }>('/users', { params });
+        return response.data;
+    },
+
+    updateRole: async (id: string, role: 'admin' | 'employee') => {
+        const response = await api.patch<{ success: boolean; user: User }>(`/users/${id}/role`, { role });
+        return response.data;
+    },
+
+    toggleStatus: async (id: string, isActive: boolean) => {
+        const response = await api.patch<{ success: boolean; user: User }>(`/users/${id}/status`, { isActive });
+        return response.data;
+    },
+
+    resetPassword: async (id: string, newPassword: string) => {
+        const response = await api.post<{ success: boolean; message: string }>(`/users/${id}/reset-password`, { newPassword });
+        return response.data;
+    },
 };
 
 // Restaurant endpoints

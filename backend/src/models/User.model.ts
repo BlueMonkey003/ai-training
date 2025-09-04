@@ -7,6 +7,7 @@ export interface IUser extends Document {
     passwordHash: string;
     role: 'employee' | 'admin';
     profileImageUrl?: string;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
     comparePassword(candidatePassword: string): Promise<boolean>;
@@ -39,6 +40,10 @@ const userSchema = new Schema<IUser>(
         profileImageUrl: {
             type: String,
             default: null,
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
         },
     },
     {
