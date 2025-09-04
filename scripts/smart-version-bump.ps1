@@ -57,7 +57,7 @@ function Get-ChangeTypeFromCommit {
 try {
     # Read current version
     if (-not (Test-Path $versionFile)) {
-        Write-Host "❌ Version file not found at: $versionFile" -ForegroundColor Red
+        Write-Host "X Version file not found at: $versionFile" -ForegroundColor Red
         exit 1
     }
     
@@ -65,7 +65,7 @@ try {
     $currentVersion = $versionData.version
     $buildNumber = $versionData.buildNumber
     
-    Write-Host "📌 Current version: $currentVersion (build $buildNumber)" -ForegroundColor Cyan
+    Write-Host "[Current] version: $currentVersion (build $buildNumber)" -ForegroundColor Cyan
     
     # Determine version bump type
     $bumpType = $Type
@@ -75,7 +75,7 @@ try {
         if ($BranchName) {
             $bumpType = Get-ChangeTypeFromBranch -branch $BranchName
             if ($bumpType) {
-                Write-Host "🔍 Detected '$bumpType' from branch: $BranchName" -ForegroundColor Yellow
+                Write-Host "[Detected] '$bumpType' from branch: $BranchName" -ForegroundColor Yellow
             }
         }
         
@@ -83,14 +83,14 @@ try {
         if (-not $bumpType -and $CommitMessage) {
             $bumpType = Get-ChangeTypeFromCommit -message $CommitMessage
             if ($bumpType) {
-                Write-Host "🔍 Detected '$bumpType' from commit: $CommitMessage" -ForegroundColor Yellow
+                Write-Host "[Detected] '$bumpType' from commit: $CommitMessage" -ForegroundColor Yellow
             }
         }
         
         # Default to patch if nothing detected
         if (-not $bumpType) {
             $bumpType = "patch"
-            Write-Host "⚠️  No type detected, defaulting to: $bumpType" -ForegroundColor Yellow
+            Write-Host "[Warning] No type detected, defaulting to: $bumpType" -ForegroundColor Yellow
         }
     }
     
@@ -106,16 +106,16 @@ try {
             $major++
             $minor = 0
             $patch = 0
-            Write-Host "📈 Major version bump" -ForegroundColor Green
+            Write-Host "[MAJOR] version bump" -ForegroundColor Green
         }
         "minor" {
             $minor++
             $patch = 0
-            Write-Host "📈 Minor version bump" -ForegroundColor Green
+            Write-Host "[MINOR] version bump" -ForegroundColor Green
         }
         "patch" {
             $patch++
-            Write-Host "📈 Patch version bump" -ForegroundColor Green
+            Write-Host "[PATCH] version bump" -ForegroundColor Green
         }
     }
     
@@ -126,10 +126,10 @@ try {
     $newVersion = "$major.$minor.$patch"
     $date = Get-Date -Format "yyyy-MM-dd"
     
-    Write-Host "✨ New version: $newVersion (build $buildNumber)" -ForegroundColor Green
+    Write-Host "[NEW] version: $newVersion (build $buildNumber)" -ForegroundColor Green
     
     if ($DryRun) {
-        Write-Host "`n🔍 DRY RUN - No changes made" -ForegroundColor Yellow
+        Write-Host "`n[DRY RUN] - No changes made" -ForegroundColor Yellow
         Write-Host "Output:"
         Write-Host "  Version: $newVersion"
         Write-Host "  Build: $buildNumber"
@@ -148,7 +148,7 @@ try {
         
         # Write back to file
         $versionData | ConvertTo-Json | Set-Content $versionFile
-        Write-Host "✅ Version file updated" -ForegroundColor Green
+        Write-Host "[OK] Version file updated" -ForegroundColor Green
         
         # Update package.json files
         $packageFiles = @(
@@ -161,11 +161,11 @@ try {
                 $packageData = Get-Content $file | ConvertFrom-Json
                 $packageData.version = $newVersion
                 $packageData | ConvertTo-Json -Depth 10 | Set-Content $file
-                Write-Host "✅ Updated: $file" -ForegroundColor Green
+                Write-Host "[OK] Updated: $file" -ForegroundColor Green
             }
         }
         
-        Write-Host "`n🎉 Version bump completed!" -ForegroundColor Green
+        Write-Host "`n[SUCCESS] Version bump completed!" -ForegroundColor Green
     }
     
     # Output for other scripts/pipeline
@@ -177,6 +177,6 @@ try {
     }
 }
 catch {
-    Write-Host "❌ Error: $_" -ForegroundColor Red
+    Write-Host "[ERROR] $_" -ForegroundColor Red
     exit 1
 }
