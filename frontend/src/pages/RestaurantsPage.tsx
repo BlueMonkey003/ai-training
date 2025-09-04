@@ -112,15 +112,15 @@ export default function RestaurantsPage() {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Restaurants</h1>
-                    <p className="mt-2 text-gray-600">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Restaurants</h1>
+                    <p className="mt-2 text-sm sm:text-base text-gray-600">
                         Beheer restaurants voor lunchbestellingen
                     </p>
                 </div>
                 {!showForm && (
-                    <Button onClick={() => setShowForm(true)}>
+                    <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
                         <Plus className="h-4 w-4 mr-2" />
                         Nieuw Restaurant
                     </Button>
