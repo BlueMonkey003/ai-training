@@ -56,136 +56,60 @@ jobs:
           Write-Host "           SMART VERSION UPDATE"
           Write-Host "════════════════════════════════════════════════"
           
-          # Functie om change type te bepalen
-          function Get-ChangeType {
-              param([string]$message, [string]$branch)
-              
-              # Check commit message voor keywords
-              if ($message -match '\b(breaking|major)\b') { return "major" }
-              if ($message -match '\b(feat|feature)\b') { return "minor" }
-              if ($message -match '\b(fix|bugfix|hotfix)\b') { return "patch" }
-              
-              # Check branch naam (voor PR's)
-              if ($branch -match '^feature/') { return "minor" }
-              if ($branch -match '^(bugfix|hotfix)/') { return "patch" }
-              
-              # Check files changed voor hints
-              $changedFiles = git diff --name-only HEAD~1
-              if ($changedFiles -match 'package\.json' -and $message -notmatch 'version') { return "minor" }
-              
-              # Default
-              return "patch"
+          # Get commit info
+          $commitMessage = git log -1 --pretty=%B
+          $sourceBranch = ""
+          
+          # Check of dit een PR merge is
+          if ($commitMessage -match "Merged PR #\d+") {
+              Write-Host "🔍 Detected PR merge"
+              # Probeer branch naam uit PR merge commit te halen
+              $prInfo = git log -1 --pretty=%b
+              if ($prInfo -match 'from ([^\s]+)') {
+                  $sourceBranch = $matches[1]
+                  Write-Host "📌 Source branch: $sourceBranch"
+              }
           }
           
-          # Functie om versie te verhogen
-          function Update-Version {
-              param(
-                  [string]$currentVersion,
-                  [string]$changeType
-              )
-              
-              $parts = $currentVersion.Split('.')
-              $major = [int]$parts[0]
-              $minor = [int]$parts[1]
-              $patch = [int]$parts[2]
-              
-              switch ($changeType) {
-                  "major" {
-                      $major++
-                      $minor = 0
-                      $patch = 0
-                  }
-                  "minor" {
-                      $minor++
-                      $patch = 0
-                  }
-                  "patch" {
-                      $patch++
-                  }
-              }
-              
-              return "$major.$minor.$patch"
+          # Detecteer type uit commit message of branch
+          $commitType = ""
+          
+          # Check voor conventional commit format
+          if ($commitMessage -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:') {
+              $commitType = $matches[1]
+              Write-Host "🏷️ Conventional commit type: $commitType"
+          }
+          # Check voor emoji-based format (uit auto-pr.ps1)
+          elseif ($commitMessage -match '^[^\s]+ (feat|fix|chore):') {
+              $commitType = $matches[1]
+              Write-Host "🏷️ Emoji commit type: $commitType"
           }
           
-          # Lees huidige versie
-          $versionFile = "version.json"
-          if (Test-Path $versionFile) {
-              $versionData = Get-Content $versionFile | ConvertFrom-Json
-              $currentVersion = $versionData.version
-              $buildNumber = $versionData.buildNumber
+          # Run smart version bump script
+          $scriptPath = Join-Path $env:BUILD_SOURCESDIRECTORY "scripts\smart-version-bump.ps1"
+          
+          Write-Host "`n🚀 Running smart version bump..."
+          $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -DryRun
+          
+          if ($LASTEXITCODE -eq 0) {
+              Write-Host "`n✅ Version analysis complete"
               
-              Write-Host "Current version: $currentVersion (build $buildNumber)"
+              # Now run the actual bump
+              Write-Host "`n📝 Applying version bump..."
+              & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage
               
-              # Bepaal change type
-              $commitMessage = git log -1 --pretty=%B
-              $sourceBranch = ""
-              
-              # Check of dit een PR merge is
-              if ($commitMessage -match "Merged PR #\d+") {
-                  Write-Host "Detected PR merge"
-                  # Haal branch naam uit PR merge commit
-                  $prInfo = git log -1 --pretty=%b
-                  if ($prInfo -match 'from ([^\s]+)') {
-                      $sourceBranch = $matches[1]
-                      Write-Host "Source branch: $sourceBranch"
-                  }
+              if ($LASTEXITCODE -eq 0) {
+                  # Commit version changes
+                  git config user.email "azure-pipeline@bluemonkeys.nl"
+                  git config user.name "Azure Pipeline"
+                  git add version.json frontend/package.json backend/package.json
+                  git commit -m "chore: bump version [skip ci]"
+                  
+                  Write-Host "✅ Version updated successfully!"
               }
-              
-              $changeType = Get-ChangeType -message $commitMessage -branch $sourceBranch
-              Write-Host "Change type detected: $changeType"
-              
-              # Update version
-              $newVersion = Update-Version -currentVersion $currentVersion -changeType $changeType
-              $buildNumber++
-              
-              Write-Host "New version: $newVersion (build $buildNumber)"
-              
-              # Update version data
-              $versionData.version = $newVersion
-              $versionData.buildNumber = $buildNumber
-              $versionData.lastUpdated = Get-Date -Format "yyyy-MM-dd"
-              $versionData.changeType = $changeType
-              $versionData.lastCommit = $commitMessage.Split("`n")[0]
-              
-              # Write back to file
-              $versionData | ConvertTo-Json | Set-Content $versionFile
-              
-              # Update package.json files
-              $files = @("frontend/package.json", "backend/package.json")
-              foreach ($file in $files) {
-                  if (Test-Path $file) {
-                      $content = Get-Content $file -Raw | ConvertFrom-Json
-                      $content.version = $newVersion
-                      $content | ConvertTo-Json -Depth 10 | Set-Content $file
-                      Write-Host "✅ Updated $file to v$newVersion"
-                  }
-              }
-              
-              # Commit version change
-              git config user.email "azure-pipeline@bluemonkeys.nl"
-              git config user.name "Azure Pipeline"
-              git add version.json frontend/package.json backend/package.json
-              git commit -m "chore: bump version to $newVersion ($changeType) [skip ci]"
-              
-              Write-Host "✅ Version updated successfully!"
-              Write-Host "   $currentVersion → $newVersion ($changeType)"
-              
-              # Set output variable voor later gebruik
-              Write-Host "##vso[task.setvariable variable=NEW_VERSION]$newVersion"
-              Write-Host "##vso[task.setvariable variable=CHANGE_TYPE]$changeType"
-          } else {
-              Write-Host "⚠️ version.json not found, creating new one"
-              
-              $newVersionData = @{
-                  version = "1.0.0"
-                  buildNumber = 1
-                  lastUpdated = Get-Date -Format "yyyy-MM-dd"
-                  changeType = "initial"
-                  lastCommit = "Initial version"
-              }
-              
-              $newVersionData | ConvertTo-Json | Set-Content $versionFile
-              Write-Host "✅ Created version.json with v1.0.0"
+          }
+          else {
+              Write-Host "⚠️ Version bump skipped or failed"
           }
     
     # Rest van de pipeline blijft hetzelfde...
