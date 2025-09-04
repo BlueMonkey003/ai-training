@@ -156,18 +156,23 @@ try {
         Write-Host "[OK] Version file updated" -ForegroundColor Green
         
         # Update package.json files
-        $packageFiles = @(
-            Join-Path $PSScriptRoot "..\frontend\package.json",
-            Join-Path $PSScriptRoot "..\backend\package.json"
-        )
+        $frontendPackage = Join-Path $PSScriptRoot "..\frontend\package.json"
+        $backendPackage = Join-Path $PSScriptRoot "..\backend\package.json"
         
-        foreach ($file in $packageFiles) {
-            if (Test-Path $file) {
-                $packageData = Get-Content $file | ConvertFrom-Json
-                $packageData.version = $newVersion
-                $packageData | ConvertTo-Json -Depth 10 | Set-Content $file
-                Write-Host "[OK] Updated: $file" -ForegroundColor Green
-            }
+        # Update frontend package.json
+        if (Test-Path $frontendPackage) {
+            $packageData = Get-Content $frontendPackage | ConvertFrom-Json
+            $packageData.version = $newVersion
+            $packageData | ConvertTo-Json -Depth 10 | Set-Content $frontendPackage
+            Write-Host "[OK] Updated: $frontendPackage" -ForegroundColor Green
+        }
+        
+        # Update backend package.json
+        if (Test-Path $backendPackage) {
+            $packageData = Get-Content $backendPackage | ConvertFrom-Json
+            $packageData.version = $newVersion
+            $packageData | ConvertTo-Json -Depth 10 | Set-Content $backendPackage
+            Write-Host "[OK] Updated: $backendPackage" -ForegroundColor Green
         }
         
         Write-Host "`n[SUCCESS] Version bump completed!" -ForegroundColor Green
