@@ -81,9 +81,12 @@ export default function ProfilePage() {
 
         setUploadingImage(true);
         try {
-            await uploadApi.uploadProfileImage(file);
+            const response = await uploadApi.uploadProfileImage(file);
             toast.success('Profielfoto geüpload');
-            window.location.reload();
+            // Gebruik React Router voor navigatie in plaats van page reload
+            setTimeout(() => {
+                window.location.href = window.location.href;
+            }, 100);
         } catch (error) {
             toast.error('Fout bij uploaden profielfoto');
         } finally {
