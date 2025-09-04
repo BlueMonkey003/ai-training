@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
 import { User, Users, ChevronRight, Shield } from 'lucide-react';
 import api from '../services/api';
 
 export default function SettingsPage() {
-    const { user, isAdmin } = useAuth();
+    const { isAdmin } = useAuth();
     const [version, setVersion] = useState('1.0.0');
     const [buildNumber, setBuildNumber] = useState(0);
 
