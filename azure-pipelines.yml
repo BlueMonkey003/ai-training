@@ -45,6 +45,61 @@ jobs:
           if ($percentUsed -gt 85) {
               Write-Host "`n⚠️ Warning: High memory usage detected!"
           }
+
+# Add deze stappen aan je bestaande pipeline VOOR de mirror naar GitHub
+
+    -  task: PowerShell@2
+       displayName: "🔢 Bump Version Number"
+       inputs:
+        targetType: inline
+        script: |
+            Write-Host "════════════════════════════════════════════════"
+            Write-Host "           UPDATING VERSION NUMBER"
+            Write-Host "════════════════════════════════════════════════"
+            
+            # Read current version
+            $versionFile = "version.json"
+            if (Test-Path $versionFile) {
+                $versionData = Get-Content $versionFile | ConvertFrom-Json
+                $currentVersion = $versionData.version
+                $buildNumber = $versionData.buildNumber
+                
+                Write-Host "Current version: $currentVersion (build $buildNumber)"
+                
+                # Increment build number
+                $buildNumber++
+                
+                # Update version data
+                $versionData.buildNumber = $buildNumber
+                $versionData.lastUpdated = Get-Date -Format "yyyy-MM-dd"
+                
+                # Write back to file
+                $versionData | ConvertTo-Json | Set-Content $versionFile
+                
+                Write-Host "✅ New build number: $buildNumber"
+                
+                # Update package.json files
+                $files = @("frontend/package.json", "backend/package.json")
+                foreach ($file in $files) {
+                    if (Test-Path $file) {
+                        $content = Get-Content $file -Raw | ConvertFrom-Json
+                        $content.version = $versionData.version
+                        $content | ConvertTo-Json -Depth 10 | Set-Content $file
+                        Write-Host "✅ Updated $file"
+                    }
+                }
+                
+                # Commit version change
+                git config user.email "azure-pipeline@bluemonkeys.nl"
+                git config user.name "Azure Pipeline"
+                git add version.json frontend/package.json backend/package.json
+                git commit -m "chore: bump build number to $buildNumber [skip ci]"
+                
+                Write-Host "✅ Version updated successfully!"
+            } else {
+                Write-Host "⚠️ version.json not found, skipping version bump"
+            }
+
     
     # Mirror naar GitHub
     - task: PowerShell@2
