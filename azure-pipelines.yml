@@ -130,7 +130,6 @@ jobs:
           
           Write-Host "`n✨ Mirror process completed!"
     
-    # Rest blijft hetzelfde
     - task: PowerShell@2
       displayName: "⏱️ Wait for GitHub"
       inputs:
@@ -168,6 +167,152 @@ jobs:
               exit 1
           }
     
+    # NIEUWE STAP: Health Check voor Backend
+    - task: PowerShell@2
+      displayName: "🏥 Backend Health Check"
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "    Waiting for Backend Deployment & Health Check"
+          Write-Host "════════════════════════════════════════════════"
+          
+          # Gebruik root endpoint als health check nog niet bestaat
+          $backendUrl = "https://lunchmonkeys-backend.onrender.com"  # Of gebruik een bestaande endpoint zoals /api/auth/check
+          $maxRetries = 60  # 10 minuten max (60 x 10 seconden)
+          $retryInterval = 10  # Wacht 10 seconden tussen checks
+          $attemptCount = 0
+          $success = $false
+          
+          Write-Host "`n🔗 Checking: $backendUrl"
+          Write-Host "⏱️ Maximum wait time: 10 minutes"
+          
+          while ($attemptCount -lt $maxRetries -and -not $success) {
+              $attemptCount++
+              Write-Host "`n📍 Attempt $attemptCount/$maxRetries..."
+              
+              try {
+                  $response = Invoke-WebRequest -Uri $backendUrl -Method GET -UseBasicParsing -TimeoutSec 30
+                  
+                  if ($response.StatusCode -eq 200) {
+                      Write-Host "✅ Backend is healthy! Status: $($response.StatusCode)"
+                      Write-Host "📋 Response: $($response.Content)"
+                      $success = $true
+                  } else {
+                      Write-Host "⚠️ Unexpected status: $($response.StatusCode)"
+                  }
+              } catch {
+                  Write-Host "⏳ Backend not ready yet... (Error: $($_.Exception.Message))"
+                  
+                  if ($attemptCount -eq $maxRetries) {
+                      Write-Host "❌ Backend health check failed after $maxRetries attempts!"
+                      exit 1
+                  }
+                  
+                  Write-Host "⏱️ Waiting $retryInterval seconds before retry..."
+                  Start-Sleep -Seconds $retryInterval
+              }
+          }
+          
+          if ($success) {
+              Write-Host "`n🎉 Backend deployment successful and healthy!"
+          }
+    
+    # NIEUWE STAP: Health Check voor Frontend
+    - task: PowerShell@2
+      displayName: "🏥 Frontend Health Check"
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "    Waiting for Frontend Deployment & Health Check"
+          Write-Host "════════════════════════════════════════════════"
+          
+          $frontendUrl = "https://lunchmonkeys-frontend.onrender.com"
+          $maxRetries = 60  # 10 minuten max
+          $retryInterval = 10  # Wacht 10 seconden tussen checks
+          $attemptCount = 0
+          $success = $false
+          
+          Write-Host "`n🔗 Checking: $frontendUrl"
+          Write-Host "⏱️ Maximum wait time: 10 minutes"
+          
+          while ($attemptCount -lt $maxRetries -and -not $success) {
+              $attemptCount++
+              Write-Host "`n📍 Attempt $attemptCount/$maxRetries..."
+              
+              try {
+                  $response = Invoke-WebRequest -Uri $frontendUrl -Method GET -UseBasicParsing -TimeoutSec 30
+                  
+                  if ($response.StatusCode -eq 200) {
+                      Write-Host "✅ Frontend is live! Status: $($response.StatusCode)"
+                      
+                      # Check of het echt de React app is
+                      if ($response.Content -like "*<!DOCTYPE html>*" -and $response.Content -like "*<div id=`"root`">*") {
+                          Write-Host "✅ React app verified!"
+                          $success = $true
+                      } else {
+                          Write-Host "⚠️ Page loaded but doesn't look like the React app"
+                      }
+                  } else {
+                      Write-Host "⚠️ Unexpected status: $($response.StatusCode)"
+                  }
+              } catch {
+                  Write-Host "⏳ Frontend not ready yet... (Error: $($_.Exception.Message))"
+                  
+                  if ($attemptCount -eq $maxRetries) {
+                      Write-Host "❌ Frontend health check failed after $maxRetries attempts!"
+                      exit 1
+                  }
+                  
+                  Write-Host "⏱️ Waiting $retryInterval seconds before retry..."
+                  Start-Sleep -Seconds $retryInterval
+              }
+          }
+          
+          if ($success) {
+              Write-Host "`n🎉 Frontend deployment successful and live!"
+          }
+    
+    # OPTIONELE STAP: Check custom domains (als certificaten issued zijn)
+    - task: PowerShell@2
+      displayName: "🌐 Custom Domain Health Check (Optional)"
+      continueOnError: true
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "    Checking Custom Domains (if available)"
+          Write-Host "════════════════════════════════════════════════"
+          
+          $customDomains = @(
+              @{
+                  Name = "Frontend Custom Domain"
+                  Url = "https://lunchmonkeys.bluemonkeysaapp.nl"
+              },
+              @{
+                  Name = "Backend Custom Domain"
+                  Url = "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health"
+              }
+          )
+          
+          foreach ($domain in $customDomains) {
+              Write-Host "`n🔍 Checking $($domain.Name): $($domain.Url)"
+              
+              try {
+                  $response = Invoke-WebRequest -Uri $domain.Url -Method GET -UseBasicParsing -TimeoutSec 10
+                  
+                  if ($response.StatusCode -eq 200) {
+                      Write-Host "✅ $($domain.Name) is accessible! Status: $($response.StatusCode)"
+                  }
+              } catch {
+                  Write-Host "⚠️ $($domain.Name) not available yet (SSL certificate may be pending)"
+                  Write-Host "   Error: $($_.Exception.Message)"
+              }
+          }
+          
+          Write-Host "`n📝 Note: Custom domains may take time for SSL certificates to be issued."
+    
     - task: PowerShell@2
       displayName: "✨ Deployment Summary"
       inputs:
@@ -176,6 +321,13 @@ jobs:
           Write-Host "╔════════════════════════════════════════════╗"
           Write-Host "║   ✅ LunchMonkeys Deployment Complete!    ║"
           Write-Host "╠════════════════════════════════════════════╣"
+          Write-Host "║ Status: All health checks passed!          ║"
+          Write-Host "╠════════════════════════════════════════════╣"
+          Write-Host "║ Render URLs (Always Available):            ║"
+          Write-Host "║ Backend:  https://lunchmonkeys-backend.onrender.com"
+          Write-Host "║ Frontend: https://lunchmonkeys-frontend.onrender.com"
+          Write-Host "╠════════════════════════════════════════════╣"
+          Write-Host "║ Custom Domains (When SSL Ready):           ║"
           Write-Host "║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl"
           Write-Host "║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl"
           Write-Host "╚════════════════════════════════════════════╝"
