@@ -178,14 +178,14 @@ jobs:
           Write-Host "════════════════════════════════════════════════"
           
           # Gebruik root endpoint als health check nog niet bestaat
-          $backendUrl = "https://lunchmonkeys-backend.onrender.com"  # Of gebruik een bestaande endpoint zoals /api/auth/check
+          $backendUrl = "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health"  # Of gebruik een bestaande endpoint zoals /api/auth/check
           $maxRetries = 60  # 10 minuten max (60 x 10 seconden)
-          $retryInterval = 10  # Wacht 10 seconden tussen checks
+          $retryInterval = 5  # Wacht 5 seconden tussen checks
           $attemptCount = 0
           $success = $false
           
           Write-Host "`n🔗 Checking: $backendUrl"
-          Write-Host "⏱️ Maximum wait time: 10 minutes"
+          Write-Host "⏱️ Maximum wait time: 5 minutes"
           
           while ($attemptCount -lt $maxRetries -and -not $success) {
               $attemptCount++
@@ -228,14 +228,14 @@ jobs:
           Write-Host "    Waiting for Frontend Deployment & Health Check"
           Write-Host "════════════════════════════════════════════════"
           
-          $frontendUrl = "https://lunchmonkeys-frontend.onrender.com"
+          $frontendUrl = "https://lunchmonkeys.bluemonkeysaapp.nl"
           $maxRetries = 60  # 10 minuten max
-          $retryInterval = 10  # Wacht 10 seconden tussen checks
+          $retryInterval = 5  # Wacht 5 seconden tussen checks
           $attemptCount = 0
           $success = $false
           
           Write-Host "`n🔗 Checking: $frontendUrl"
-          Write-Host "⏱️ Maximum wait time: 10 minutes"
+          Write-Host "⏱️ Maximum wait time: 5 minutes"
           
           while ($attemptCount -lt $maxRetries -and -not $success) {
               $attemptCount++
