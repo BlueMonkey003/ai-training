@@ -7,6 +7,11 @@ trigger:
       - backend/**
       - frontend/**
       - shared/**
+    exclude:
+      - '**/package.json'
+      - '**/package-lock.json'
+      - version.json
+      - '**/*.md'
 
 pool:
   name: Default
@@ -217,7 +222,20 @@ jobs:
                   git add version.json frontend/package.json backend/package.json
                   git commit -m "chore: bump version [skip ci]"
                   
-                  Write-Host "[SUCCESS] Version updated successfully!"
+                  # Push changes back to repository
+                  Write-Host "[INFO] Pushing version changes back to repository..."
+                  # Configure git to use the pipeline token
+                  $repoUrl = "https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application"
+                  git remote set-url origin $repoUrl
+                  git push origin HEAD:main
+                  
+                  if ($LASTEXITCODE -eq 0) {
+                      Write-Host "[SUCCESS] Version updated and pushed successfully!"
+                  }
+                  else {
+                      Write-Host "[ERROR] Failed to push version changes!"
+                      exit 1
+                  }
               }
           }
           else {
@@ -345,3 +363,231 @@ jobs:
           Write-Host "`n✅ Both deployments triggered successfully!"
           Write-Host "⏳ Waiting 15 seconds before starting status monitoring..."
           Start-Sleep -Seconds 15
+    
+    # STAP 2: Monitor BEIDE deployments parallel
+    - task: PowerShell@2
+      displayName: "📊 Monitor Parallel Deployments"
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "    Monitoring Parallel Deployments"
+          Write-Host "════════════════════════════════════════════════"
+          
+          $renderApiKey = "$(RENDER_API_KEY)"
+          
+          # Service configurations
+          $services = @(
+              @{
+                  Name = "Backend"
+                  ServiceId = "srv-d2rejiuuk2gs73883gog"
+                  HealthUrl = "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health"
+                  Complete = $false
+                  Status = "pending"
+              },
+              @{
+                  Name = "Frontend"
+                  ServiceId = "srv-d2reover433s73fiir2g"
+                  HealthUrl = "https://lunchmonkeys.bluemonkeysaapp.nl"
+                  Complete = $false
+                  Status = "pending"
+              }
+          )
+          
+          $maxWaitMinutes = 5
+          $checkInterval = 10
+          $maxAttempts = [math]::Floor($maxWaitMinutes * 60 / $checkInterval)
+          $attempt = 0
+          
+          Write-Host "`n⏱️ Max wait time: $maxWaitMinutes minutes"
+          Write-Host "🔄 Check interval: $checkInterval seconds"
+          Write-Host "📊 Max attempts: $maxAttempts"
+          
+          # Monitor both deployments
+          while ($attempt -lt $maxAttempts) {
+              $attempt++
+              
+              Write-Host "`n════════════════════════════════════════════════"
+              Write-Host " Check $attempt/$maxAttempts"
+              Write-Host "════════════════════════════════════════════════"
+              
+              foreach ($service in $services) {
+                  if (-not $service.Complete) {
+                      Write-Host "`n🔍 Checking $($service.Name)..."
+                      
+                      try {
+                          $headers = @{
+                              "Authorization" = "Bearer $renderApiKey"
+                              "Accept" = "application/json"
+                          }
+                          
+                          $statusUrl = "https://api.render.com/v1/services/$($service.ServiceId)/deploys?limit=1"
+                          $statusResponse = Invoke-RestMethod -Uri $statusUrl -Headers $headers -Method GET
+                          
+                          if ($statusResponse) {
+                              # De API geeft een array terug met objecten die een 'deploy' property hebben
+                              if ($statusResponse -is [Array] -and $statusResponse.Count -gt 0 -and $statusResponse[0].deploy) {
+                                  $latestDeploy = $statusResponse[0].deploy
+                                  $deployStatus = $latestDeploy.status
+                                  $service.Status = $deployStatus
+                                  
+                                  # Haal commit info op
+                                  $commitMessage = if ($latestDeploy.commit.message) { 
+                                      $latestDeploy.commit.message.Substring(0, [Math]::Min(50, $latestDeploy.commit.message.Length)) 
+                                  } else { 
+                                      "No message" 
+                                  }
+                                  
+                                  Write-Host "  📊 Status: $deployStatus"
+                                  Write-Host "  📝 Commit: $commitMessage"
+                                  
+                                  switch ($deployStatus) {
+                                      "live" {
+                                          Write-Host "  ✅ $($service.Name) is LIVE!"
+                                          $service.Complete = $true
+                                      }
+                                      "build_failed" {
+                                          Write-Host "  ❌ $($service.Name) build FAILED!"
+                                          exit 1
+                                      }
+                                      "canceled" {
+                                          Write-Host "  ⚠️ $($service.Name) deployment CANCELED!"
+                                          exit 1
+                                      }
+                                      "building" {
+                                          Write-Host "  🔨 Building..."
+                                      }
+                                      "deploying" {
+                                          Write-Host "  📦 Deploying..."
+                                      }
+                                      default {
+                                          Write-Host "  ⏳ Status: $deployStatus"
+                                      }
+                                  }
+                              } else {
+                                  Write-Host "  ⚠️ Unexpected API response structure"
+                              }
+                          } else {
+                              Write-Host "  ⚠️ Empty response from API"
+                          }
+                      } catch {
+                          Write-Host "  ⚠️ Error checking status: $_"
+                      }
+                  } else {
+                      Write-Host "`n✅ $($service.Name): Already complete"
+                  }
+              }
+              
+              # Check if all services are complete AFTER checking all services
+              $allComplete = $true
+              foreach ($service in $services) {
+                  if (-not $service.Complete) {
+                      $allComplete = $false
+                      break
+                  }
+              }
+              
+              if ($allComplete) {
+                  Write-Host "`n🎉 All deployments complete!"
+                  break
+              }
+              
+              if ($attempt -lt $maxAttempts) {
+                  Write-Host "`n⏳ Waiting $checkInterval seconds before next check..."
+                  Start-Sleep -Seconds $checkInterval
+              }
+          }
+          
+          # Final status check
+          $backendComplete = $services[0].Complete
+          $frontendComplete = $services[1].Complete
+          
+          if (-not $backendComplete -or -not $frontendComplete) {
+              Write-Host "`n❌ Deployment timeout!"
+              if (-not $backendComplete) { Write-Host "  - Backend: $($services[0].Status)" }
+              if (-not $frontendComplete) { Write-Host "  - Frontend: $($services[1].Status)" }
+              exit 1
+          }
+          
+          Write-Host "`n✅ Both services successfully deployed!"
+    
+    # STAP 3: Health checks voor beide services
+    - task: PowerShell@2
+      displayName: "🏥 Verify Health Status"
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "    Final Health Verification"
+          Write-Host "════════════════════════════════════════════════"
+          
+          $healthCheckFailed = $false
+          
+          # Backend health check
+          Write-Host "`n🔧 Backend Health Check..."
+          try {
+              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" -Method GET -UseBasicParsing -TimeoutSec 30
+              if ($response.StatusCode -eq 200) {
+                  Write-Host "✅ Backend is healthy!"
+                  Write-Host "Response: $($response.Content)"
+              }
+          } catch {
+              Write-Host "❌ Backend health check failed: $_"
+              $healthCheckFailed = $true
+          }
+          
+          # Frontend health check
+          Write-Host "`n🎨 Frontend Health Check..."
+          try {
+              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" -Method GET -UseBasicParsing -TimeoutSec 30
+              if ($response.StatusCode -eq 200) {
+                  if ($response.Content -like "*<!DOCTYPE html>*" -and $response.Content -like "*<div id=`"root`">*") {
+                      Write-Host "✅ Frontend React app is live!"
+                  } else {
+                      Write-Host "⚠️ Frontend loaded but doesn't look like React app"
+                  }
+              }
+          } catch {
+              Write-Host "❌ Frontend health check failed: $_"
+              $healthCheckFailed = $true
+          }
+          
+          # Custom domain checks (optional)
+          Write-Host "`n🌐 Custom Domain Checks (optional)..."
+          
+          try {
+              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" -Method GET -UseBasicParsing -TimeoutSec 10
+              Write-Host "✅ Custom frontend domain is accessible"
+          } catch {
+              Write-Host "⚠️ Custom frontend domain not ready (SSL may be pending)"
+          }
+          
+          try {
+              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" -Method GET -UseBasicParsing -TimeoutSec 10
+              Write-Host "✅ Custom backend domain is accessible"
+          } catch {
+              Write-Host "⚠️ Custom backend domain not ready (SSL may be pending)"
+          }
+          
+          if ($healthCheckFailed) {
+              Write-Host "`n⚠️ Some health checks failed, but deployments are complete"
+          }
+    
+    - task: PowerShell@2
+      displayName: "✨ Deployment Summary"
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "╔════════════════════════════════════════════╗"
+          Write-Host "║   ✅ LunchMonkeys Deployment Complete!    ║"
+          Write-Host "╠════════════════════════════════════════════╣"
+          Write-Host "║ Both services deployed successfully!       ║"
+          Write-Host "╠════════════════════════════════════════════╣"
+          Write-Host "║ Render URLs (Always Available):            ║"
+          Write-Host "║ Backend:  https://lunchmonkeys-backend.onrender.com"
+          Write-Host "║ Frontend: https://lunchmonkeys-frontend.onrender.com"
+          Write-Host "╠════════════════════════════════════════════╣"
+          Write-Host "║ Custom Domains (When SSL Ready):           ║"
+          Write-Host "║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl"
+          Write-Host "║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl"
+          Write-Host "╚════════════════════════════════════════════╝"
