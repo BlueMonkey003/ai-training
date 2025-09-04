@@ -60,12 +60,16 @@ jobs:
           $commitMessage = git log -1 --pretty=%B
           $sourceBranch = ""
           
+          Write-Host "[DEBUG] Commit message: $commitMessage"
+          
           # Check of dit een PR merge is
-          if ($commitMessage -match "Merged PR #\d+") {
+          $isPRMerge = $commitMessage -match "Merged PR #\d+"
+          if ($isPRMerge) {
               Write-Host "[INFO] Detected PR merge"
               # Probeer branch naam uit PR merge commit te halen
               $prInfo = git log -1 --pretty=%b
-              if ($prInfo -match 'from ([^\s]+)') {
+              $branchMatch = $prInfo -match 'from ([^\s]+)'
+              if ($branchMatch) {
                   $sourceBranch = $matches[1]
                   Write-Host "[INFO] Source branch: $sourceBranch"
               }
@@ -75,20 +79,33 @@ jobs:
           $commitType = ""
           
           # Check voor conventional commit format
-          if ($commitMessage -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:') {
+          $conventionalMatch = $commitMessage -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:'
+          if ($conventionalMatch) {
               $commitType = $matches[1]
               Write-Host "[TYPE] Conventional commit type: $commitType"
           }
-          # Check voor emoji-based format (uit auto-pr.ps1)
-          elseif ($commitMessage -match '^[^\s]+ (feat|fix|chore):') {
-              $commitType = $matches[1]
-              Write-Host "[TYPE] Emoji commit type: $commitType"
+          else {
+              # Check voor emoji-based format (uit auto-pr.ps1)
+              $emojiMatch = $commitMessage -match '^[^\s]+ (feat|fix|chore):'
+              if ($emojiMatch) {
+                  $commitType = $matches[1]
+                  Write-Host "[TYPE] Emoji commit type: $commitType"
+              }
           }
           
           # Run smart version bump script
           $scriptPath = Join-Path $env:BUILD_SOURCESDIRECTORY "scripts\smart-version-bump.ps1"
           
+          if (-not (Test-Path $scriptPath)) {
+              Write-Host "[ERROR] Version bump script not found at: $scriptPath"
+              Write-Host "[INFO] Current directory: $(Get-Location)"
+              Write-Host "[INFO] Directory contents:"
+              Get-ChildItem -Path $env:BUILD_SOURCESDIRECTORY -Recurse | Where-Object { $_.Name -like "*version*.ps1" } | ForEach-Object { Write-Host "  - $($_.FullName)" }
+              exit 1
+          }
+          
           Write-Host "`n[RUNNING] smart version bump..."
+          Write-Host "[INFO] Script path: $scriptPath"
           $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -DryRun
           
           if ($LASTEXITCODE -eq 0) {
