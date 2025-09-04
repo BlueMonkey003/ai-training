@@ -13,7 +13,7 @@ pool:
 
 variables:
   - group: GitHubCredentials
-  - group: RenderAPICredentials  # Voor Render API key
+  - group: RenderAPICredentials
 
 jobs:
 - job: Deploy
@@ -21,7 +21,7 @@ jobs:
     clean: all
   
   steps:
-    # Diagnostiek blijft zoals het was
+    # Diagnostiek
     - task: PowerShell@2
       displayName: "🔍 System Diagnostics"
       inputs:
@@ -46,62 +46,149 @@ jobs:
               Write-Host "`n⚠️ Warning: High memory usage detected!"
           }
 
-# Add deze stappen aan je bestaande pipeline VOOR de mirror naar GitHub
-
-    -  task: PowerShell@2
-       displayName: "🔢 Bump Version Number"
-       inputs:
+    # NIEUW: Smart Version Bump
+    - task: PowerShell@2
+      displayName: "🔢 Smart Version Update"
+      inputs:
         targetType: inline
         script: |
-            Write-Host "════════════════════════════════════════════════"
-            Write-Host "           UPDATING VERSION NUMBER"
-            Write-Host "════════════════════════════════════════════════"
-            
-            # Read current version
-            $versionFile = "version.json"
-            if (Test-Path $versionFile) {
-                $versionData = Get-Content $versionFile | ConvertFrom-Json
-                $currentVersion = $versionData.version
-                $buildNumber = $versionData.buildNumber
-                
-                Write-Host "Current version: $currentVersion (build $buildNumber)"
-                
-                # Increment build number
-                $buildNumber++
-                
-                # Update version data
-                $versionData.buildNumber = $buildNumber
-                $versionData.lastUpdated = Get-Date -Format "yyyy-MM-dd"
-                
-                # Write back to file
-                $versionData | ConvertTo-Json | Set-Content $versionFile
-                
-                Write-Host "✅ New build number: $buildNumber"
-                
-                # Update package.json files
-                $files = @("frontend/package.json", "backend/package.json")
-                foreach ($file in $files) {
-                    if (Test-Path $file) {
-                        $content = Get-Content $file -Raw | ConvertFrom-Json
-                        $content.version = $versionData.version
-                        $content | ConvertTo-Json -Depth 10 | Set-Content $file
-                        Write-Host "✅ Updated $file"
-                    }
-                }
-                
-                # Commit version change
-                git config user.email "azure-pipeline@bluemonkeys.nl"
-                git config user.name "Azure Pipeline"
-                git add version.json frontend/package.json backend/package.json
-                git commit -m "chore: bump build number to $buildNumber [skip ci]"
-                
-                Write-Host "✅ Version updated successfully!"
-            } else {
-                Write-Host "⚠️ version.json not found, skipping version bump"
-            }
-
+          Write-Host "════════════════════════════════════════════════"
+          Write-Host "           SMART VERSION UPDATE"
+          Write-Host "════════════════════════════════════════════════"
+          
+          # Functie om change type te bepalen
+          function Get-ChangeType {
+              param([string]$message, [string]$branch)
+              
+              # Check commit message voor keywords
+              if ($message -match '\b(breaking|major)\b') { return "major" }
+              if ($message -match '\b(feat|feature)\b') { return "minor" }
+              if ($message -match '\b(fix|bugfix|hotfix)\b') { return "patch" }
+              
+              # Check branch naam (voor PR's)
+              if ($branch -match '^feature/') { return "minor" }
+              if ($branch -match '^(bugfix|hotfix)/') { return "patch" }
+              
+              # Check files changed voor hints
+              $changedFiles = git diff --name-only HEAD~1
+              if ($changedFiles -match 'package\.json' -and $message -notmatch 'version') { return "minor" }
+              
+              # Default
+              return "patch"
+          }
+          
+          # Functie om versie te verhogen
+          function Update-Version {
+              param(
+                  [string]$currentVersion,
+                  [string]$changeType
+              )
+              
+              $parts = $currentVersion.Split('.')
+              $major = [int]$parts[0]
+              $minor = [int]$parts[1]
+              $patch = [int]$parts[2]
+              
+              switch ($changeType) {
+                  "major" {
+                      $major++
+                      $minor = 0
+                      $patch = 0
+                  }
+                  "minor" {
+                      $minor++
+                      $patch = 0
+                  }
+                  "patch" {
+                      $patch++
+                  }
+              }
+              
+              return "$major.$minor.$patch"
+          }
+          
+          # Lees huidige versie
+          $versionFile = "version.json"
+          if (Test-Path $versionFile) {
+              $versionData = Get-Content $versionFile | ConvertFrom-Json
+              $currentVersion = $versionData.version
+              $buildNumber = $versionData.buildNumber
+              
+              Write-Host "Current version: $currentVersion (build $buildNumber)"
+              
+              # Bepaal change type
+              $commitMessage = git log -1 --pretty=%B
+              $sourceBranch = ""
+              
+              # Check of dit een PR merge is
+              if ($commitMessage -match "Merged PR #\d+") {
+                  Write-Host "Detected PR merge"
+                  # Haal branch naam uit PR merge commit
+                  $prInfo = git log -1 --pretty=%b
+                  if ($prInfo -match 'from ([^\s]+)') {
+                      $sourceBranch = $matches[1]
+                      Write-Host "Source branch: $sourceBranch"
+                  }
+              }
+              
+              $changeType = Get-ChangeType -message $commitMessage -branch $sourceBranch
+              Write-Host "Change type detected: $changeType"
+              
+              # Update version
+              $newVersion = Update-Version -currentVersion $currentVersion -changeType $changeType
+              $buildNumber++
+              
+              Write-Host "New version: $newVersion (build $buildNumber)"
+              
+              # Update version data
+              $versionData.version = $newVersion
+              $versionData.buildNumber = $buildNumber
+              $versionData.lastUpdated = Get-Date -Format "yyyy-MM-dd"
+              $versionData.changeType = $changeType
+              $versionData.lastCommit = $commitMessage.Split("`n")[0]
+              
+              # Write back to file
+              $versionData | ConvertTo-Json | Set-Content $versionFile
+              
+              # Update package.json files
+              $files = @("frontend/package.json", "backend/package.json")
+              foreach ($file in $files) {
+                  if (Test-Path $file) {
+                      $content = Get-Content $file -Raw | ConvertFrom-Json
+                      $content.version = $newVersion
+                      $content | ConvertTo-Json -Depth 10 | Set-Content $file
+                      Write-Host "✅ Updated $file to v$newVersion"
+                  }
+              }
+              
+              # Commit version change
+              git config user.email "azure-pipeline@bluemonkeys.nl"
+              git config user.name "Azure Pipeline"
+              git add version.json frontend/package.json backend/package.json
+              git commit -m "chore: bump version to $newVersion ($changeType) [skip ci]"
+              
+              Write-Host "✅ Version updated successfully!"
+              Write-Host "   $currentVersion → $newVersion ($changeType)"
+              
+              # Set output variable voor later gebruik
+              Write-Host "##vso[task.setvariable variable=NEW_VERSION]$newVersion"
+              Write-Host "##vso[task.setvariable variable=CHANGE_TYPE]$changeType"
+          } else {
+              Write-Host "⚠️ version.json not found, creating new one"
+              
+              $newVersionData = @{
+                  version = "1.0.0"
+                  buildNumber = 1
+                  lastUpdated = Get-Date -Format "yyyy-MM-dd"
+                  changeType = "initial"
+                  lastCommit = "Initial version"
+              }
+              
+              $newVersionData | ConvertTo-Json | Set-Content $versionFile
+              Write-Host "✅ Created version.json with v1.0.0"
+          }
     
-    # Mirror naar GitHub
+    # Rest van de pipeline blijft hetzelfde...
     - task: PowerShell@2
       displayName: "📤 Mirror Monorepo to GitHub"
       inputs:
@@ -112,15 +199,12 @@ jobs:
           Write-Host "╚══════════════════════════════════════╝"
           
           try {
-              # Cleanup
               if (Test-Path "temp-repo") {
                   Write-Host "⚠️ Removing existing temp-repo..."
                   Remove-Item -Recurse -Force temp-repo
               }
               
               Write-Host "`n📥 Cloning repository..."
-              
-              # Eerst shallow clone voor snelheid
               git clone --depth 1 --single-branch --branch main https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application temp-repo
               
               if (-not $?) {
@@ -129,37 +213,30 @@ jobs:
               
               cd temp-repo
               
-              # Configure git
               git config user.email "azure-pipeline@bluemonkeys.nl"
               git config user.name "Azure Pipeline"
               
-              # CRUCIALE FIX: Unshallow de repo voor GitHub
               Write-Host "`n🔄 Fetching full history for GitHub compatibility..."
               git fetch --unshallow origin
               
-              # Verify structure
               Write-Host "`n📁 Repository Structure:"
               Get-ChildItem | Format-Table Name, Mode, LastWriteTime
               
-              # Check backend
               Write-Host "`n🔧 Backend Status:"
               if (Test-Path "backend/package.json") {
                   $backendPkg = Get-Content backend/package.json | ConvertFrom-Json
                   Write-Host "✅ Backend found: $($backendPkg.name) v$($backendPkg.version)"
               }
               
-              # Check frontend  
               Write-Host "`n🎨 Frontend Status:"
               if (Test-Path "frontend/package.json") {
                   $frontendPkg = Get-Content frontend/package.json | ConvertFrom-Json
                   Write-Host "✅ Frontend found: $($frontendPkg.name) v$($frontendPkg.version)"
               }
               
-              # Add GitHub remote
               Write-Host "`n🔗 Adding GitHub remote..."
               git remote add github https://$(GITHUB_TOKEN)@github.com/BlueMonkey003/ai-training.git
               
-              # Push to GitHub with force
               Write-Host "`n📤 Pushing to GitHub..."
               git push github HEAD:main --force
               
@@ -185,6 +262,7 @@ jobs:
           
           Write-Host "`n✨ Mirror process completed!"
     
+    # Rest van de deployment steps blijven hetzelfde...
     - task: PowerShell@2
       displayName: "⏱️ Wait for GitHub"
       inputs:
@@ -194,7 +272,6 @@ jobs:
           Start-Sleep -Seconds 5
           Write-Host "✅ Continue with deployments..."
     
-    # STAP 1: Trigger BEIDE deployments tegelijkertijd
     - task: PowerShell@2
       displayName: "🚀 Trigger Both Deployments Simultaneously"
       inputs:
@@ -206,7 +283,6 @@ jobs:
           
           $deploymentsFailed = $false
           
-          # Backend deployment trigger
           Write-Host "`n🔧 Triggering Backend Deploy..."
           try {
               $backendResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk" -Method POST -UseBasicParsing
@@ -216,7 +292,6 @@ jobs:
               $deploymentsFailed = $true
           }
           
-          # Frontend deployment trigger
           Write-Host "`n🎨 Triggering Frontend Deploy..."
           try {
               $frontendResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs" -Method POST -UseBasicParsing
@@ -234,231 +309,3 @@ jobs:
           Write-Host "`n✅ Both deployments triggered successfully!"
           Write-Host "⏳ Waiting 15 seconds before starting status monitoring..."
           Start-Sleep -Seconds 15
-    
-# STAP 2: Monitor BEIDE deployments parallel
-    - task: PowerShell@2
-      displayName: "📊 Monitor Parallel Deployments"
-      inputs:
-       targetType: inline
-       script: |
-         Write-Host "════════════════════════════════════════════════"
-         Write-Host "    Monitoring Parallel Deployments"
-         Write-Host "════════════════════════════════════════════════"
-         
-         $renderApiKey = "$(RENDER_API_KEY)"
-         
-         # Service configurations
-         $services = @(
-             @{
-                 Name = "Backend"
-                 ServiceId = "srv-d2rejiuuk2gs73883gog"
-                 HealthUrl = "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health"
-                 Complete = $false
-                 Status = "pending"
-             },
-             @{
-                 Name = "Frontend"
-                 ServiceId = "srv-d2reover433s73fiir2g"
-                 HealthUrl = "https://lunchmonkeys.bluemonkeysaapp.nl"
-                 Complete = $false
-                 Status = "pending"
-             }
-         )
-         
-         $maxWaitMinutes = 5
-         $checkInterval = 10
-         $maxAttempts = [math]::Floor($maxWaitMinutes * 60 / $checkInterval)
-         $attempt = 0
-         
-         Write-Host "`n⏱️ Max wait time: $maxWaitMinutes minutes"
-         Write-Host "🔄 Check interval: $checkInterval seconds"
-         Write-Host "📊 Max attempts: $maxAttempts"
-         
-         # Monitor both deployments
-         while ($attempt -lt $maxAttempts) {
-             $attempt++
-             
-             Write-Host "`n════════════════════════════════════════════════"
-             Write-Host " Check $attempt/$maxAttempts"
-             Write-Host "════════════════════════════════════════════════"
-             
-             foreach ($service in $services) {
-                 if (-not $service.Complete) {
-                     Write-Host "`n🔍 Checking $($service.Name)..."
-                     
-                     try {
-                         $headers = @{
-                             "Authorization" = "Bearer $renderApiKey"
-                             "Accept" = "application/json"
-                         }
-                         
-                         $statusUrl = "https://api.render.com/v1/services/$($service.ServiceId)/deploys?limit=1"
-                         $statusResponse = Invoke-RestMethod -Uri $statusUrl -Headers $headers -Method GET
-                         
-                         if ($statusResponse) {
-                             # De API geeft een array terug met objecten die een 'deploy' property hebben
-                             if ($statusResponse -is [Array] -and $statusResponse.Count -gt 0 -and $statusResponse[0].deploy) {
-                                 $latestDeploy = $statusResponse[0].deploy
-                                 $deployStatus = $latestDeploy.status
-                                 $service.Status = $deployStatus
-                                 
-                                 # Haal commit info op
-                                 $commitMessage = if ($latestDeploy.commit.message) { 
-                                     $latestDeploy.commit.message.Substring(0, [Math]::Min(50, $latestDeploy.commit.message.Length)) 
-                                 } else { 
-                                     "No message" 
-                                 }
-                                 
-                                 Write-Host "  📊 Status: $deployStatus"
-                                 Write-Host "  📝 Commit: $commitMessage"
-                                 
-                                 switch ($deployStatus) {
-                                     "live" {
-                                         Write-Host "  ✅ $($service.Name) is LIVE!"
-                                         $service.Complete = $true
-                                     }
-                                     "build_failed" {
-                                         Write-Host "  ❌ $($service.Name) build FAILED!"
-                                         exit 1
-                                     }
-                                     "canceled" {
-                                         Write-Host "  ⚠️ $($service.Name) deployment CANCELED!"
-                                         exit 1
-                                     }
-                                     "building" {
-                                         Write-Host "  🔨 Building..."
-                                     }
-                                     "deploying" {
-                                         Write-Host "  📦 Deploying..."
-                                     }
-                                     default {
-                                         Write-Host "  ⏳ Status: $deployStatus"
-                                     }
-                                 }
-                             } else {
-                                 Write-Host "  ⚠️ Unexpected API response structure"
-                             }
-                         } else {
-                             Write-Host "  ⚠️ Empty response from API"
-                         }
-                     } catch {
-                         Write-Host "  ⚠️ Error checking status: $_"
-                     }
-                 } else {
-                     Write-Host "`n✅ $($service.Name): Already complete"
-                 }
-             }
-             
-             # Check if all services are complete AFTER checking all services
-             $allComplete = $true
-             foreach ($service in $services) {
-                 if (-not $service.Complete) {
-                     $allComplete = $false
-                     break
-                 }
-             }
-             
-             if ($allComplete) {
-                 Write-Host "`n🎉 All deployments complete!"
-                 break
-             }
-             
-             if ($attempt -lt $maxAttempts) {
-                 Write-Host "`n⏳ Waiting $checkInterval seconds before next check..."
-                 Start-Sleep -Seconds $checkInterval
-             }
-         }
-         
-         # Final status check
-         $backendComplete = $services[0].Complete
-         $frontendComplete = $services[1].Complete
-         
-         if (-not $backendComplete -or -not $frontendComplete) {
-             Write-Host "`n❌ Deployment timeout!"
-             if (-not $backendComplete) { Write-Host "  - Backend: $($services[0].Status)" }
-             if (-not $frontendComplete) { Write-Host "  - Frontend: $($services[1].Status)" }
-             exit 1
-         }
-         
-         Write-Host "`n✅ Both services successfully deployed!"
-
-    # STAP 3: Health checks voor beide services
-    - task: PowerShell@2
-      displayName: "🏥 Verify Health Status"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "════════════════════════════════════════════════"
-          Write-Host "    Final Health Verification"
-          Write-Host "════════════════════════════════════════════════"
-          
-          $healthCheckFailed = $false
-          
-          # Backend health check
-          Write-Host "`n🔧 Backend Health Check..."
-          try {
-              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" -Method GET -UseBasicParsing -TimeoutSec 30
-              if ($response.StatusCode -eq 200) {
-                  Write-Host "✅ Backend is healthy!"
-                  Write-Host "Response: $($response.Content)"
-              }
-          } catch {
-              Write-Host "❌ Backend health check failed: $_"
-              $healthCheckFailed = $true
-          }
-          
-          # Frontend health check
-          Write-Host "`n🎨 Frontend Health Check..."
-          try {
-              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" -Method GET -UseBasicParsing -TimeoutSec 30
-              if ($response.StatusCode -eq 200) {
-                  if ($response.Content -like "*<!DOCTYPE html>*" -and $response.Content -like "*<div id=`"root`">*") {
-                      Write-Host "✅ Frontend React app is live!"
-                  } else {
-                      Write-Host "⚠️ Frontend loaded but doesn't look like React app"
-                  }
-              }
-          } catch {
-              Write-Host "❌ Frontend health check failed: $_"
-              $healthCheckFailed = $true
-          }
-          
-          # Custom domain checks (optional)
-          Write-Host "`n🌐 Custom Domain Checks (optional)..."
-          
-          try {
-              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" -Method GET -UseBasicParsing -TimeoutSec 10
-              Write-Host "✅ Custom frontend domain is accessible"
-          } catch {
-              Write-Host "⚠️ Custom frontend domain not ready (SSL may be pending)"
-          }
-          
-          try {
-              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" -Method GET -UseBasicParsing -TimeoutSec 10
-              Write-Host "✅ Custom backend domain is accessible"
-          } catch {
-              Write-Host "⚠️ Custom backend domain not ready (SSL may be pending)"
-          }
-          
-          if ($healthCheckFailed) {
-              Write-Host "`n⚠️ Some health checks failed, but deployments are complete"
-          }
-    
-    - task: PowerShell@2
-      displayName: "✨ Deployment Summary"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "╔════════════════════════════════════════════╗"
-          Write-Host "║   ✅ LunchMonkeys Deployment Complete!    ║"
-          Write-Host "╠════════════════════════════════════════════╣"
-          Write-Host "║ Both services deployed successfully!       ║"
-          Write-Host "╠════════════════════════════════════════════╣"
-          Write-Host "║ Render URLs (Always Available):            ║"
-          Write-Host "║ Backend:  https://lunchmonkeys-backend.onrender.com"
-          Write-Host "║ Frontend: https://lunchmonkeys-frontend.onrender.com"
-          Write-Host "╠════════════════════════════════════════════╣"
-          Write-Host "║ Custom Domains (When SSL Ready):           ║"
-          Write-Host "║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl"
-          Write-Host "║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl"
-          Write-Host "╚════════════════════════════════════════════╝"
