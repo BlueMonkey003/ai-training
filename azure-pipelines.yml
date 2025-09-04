@@ -69,13 +69,28 @@ jobs:
               # Probeer branch naam uit PR merge commit te halen
               try {
                   $prInfo = git log -1 --pretty=%b
-                  if ($prInfo -match 'from ([^\s]+)') {
-                      $sourceBranch = [string]$matches[1]
-                      Write-Host "[INFO] Source branch: $sourceBranch"
+                  # Zoek naar "from <branchname>" pattern
+                  if ($prInfo -like "*from */*") {
+                      # Extract branch name met string manipulatie
+                      $fromIndex = $prInfo.IndexOf("from ")
+                      if ($fromIndex -ge 0) {
+                          $afterFrom = $prInfo.Substring($fromIndex + 5)
+                          $spaceIndex = $afterFrom.IndexOf(" ")
+                          if ($spaceIndex -gt 0) {
+                              $sourceBranch = $afterFrom.Substring(0, $spaceIndex)
+                          }
+                          else {
+                              $sourceBranch = $afterFrom.Trim()
+                          }
+                          Write-Host "[INFO] Source branch: $sourceBranch"
+                      }
+                  }
+                  else {
+                      Write-Host "[DEBUG] No source branch found in PR body"
                   }
               }
               catch {
-                  Write-Host "[WARNING] Could not extract source branch"
+                  Write-Host "[WARNING] Could not extract source branch: $_"
               }
           }
           
@@ -88,16 +103,15 @@ jobs:
               # Extract het deel na "Merged PR #: " of "Merged PR 15: "
               # Azure DevOps heeft soms issues met $matches scope, dus we doen het stap voor stap
               try {
-                  if ($commitMessage -match 'Merged PR #?\d+:\s*(.+)$') {
-                      # Sla de match direct op om scope issues te voorkomen
-                      $prTitle = $matches[1]
-                      if ($prTitle) {
-                          $messageToCheck = $prTitle.Trim()
-                          Write-Host "[DEBUG] PR title: $messageToCheck"
-                      }
+                  # Azure DevOps PowerShell heeft issues met $matches scope
+                  # Gebruik een alternatieve aanpak met -replace
+                  $prTitle = $commitMessage -replace '^Merged PR #?\d+:\s*', ''
+                  if ($prTitle -and $prTitle -ne $commitMessage) {
+                      $messageToCheck = $prTitle.Trim()
+                      Write-Host "[DEBUG] PR title: $messageToCheck"
                   }
                   else {
-                      Write-Host "[WARNING] Could not extract PR title from: $commitMessage"
+                      Write-Host "[WARNING] Could not extract PR title from commit message"
                   }
               }
               catch {
@@ -107,22 +121,45 @@ jobs:
           }
           
           # Check voor conventional commit format
+          # Gebruik een meer defensieve aanpak voor Azure DevOps
           if ($messageToCheck -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:') {
-              $commitType = [string]$matches[1]
-              Write-Host "[TYPE] Conventional commit type: $commitType"
+              # Extract type uit het begin van de string
+              foreach ($type in @('feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore', 'perf', 'ci', 'build', 'revert')) {
+                  if ($messageToCheck -like "$type*:*") {
+                      $commitType = $type
+                      Write-Host "[TYPE] Conventional commit type: $commitType"
+                      break
+                  }
+              }
           }
-          elseif ($messageToCheck -match '^[^\s]+ (feat|fix|chore):') {
-              # Check voor emoji-based format (uit auto-pr.ps1)
-              # Match emoji gevolgd door type: bv "✨ feat:" of "🔧 fix:"
-              $commitType = [string]$matches[1]
-              Write-Host "[TYPE] Emoji commit type: $commitType"
+          
+          # Als nog geen type gevonden, check emoji format
+          if (-not $commitType) {
+              # Check voor emoji-based format
+              if ($messageToCheck -match '^[^\s]+ (feat|fix|chore):') {
+                  foreach ($type in @('feat', 'fix', 'chore')) {
+                      if ($messageToCheck -like "* $type`:*") {
+                          $commitType = $type
+                          Write-Host "[TYPE] Emoji commit type: $commitType"
+                          break
+                      }
+                  }
+              }
           }
-          elseif ($messageToCheck -match '\b(feat|fix|chore)\b') {
-              # Fallback: zoek overal in de message naar type keywords
-              $commitType = [string]$matches[1]
-              Write-Host "[TYPE] Fallback type detection: $commitType"
+          
+          # Als nog steeds geen type, fallback
+          if (-not $commitType) {
+              # Simpele keyword search
+              foreach ($type in @('feat', 'fix', 'chore')) {
+                  if ($messageToCheck -like "*$type*") {
+                      $commitType = $type
+                      Write-Host "[TYPE] Fallback type detection: $commitType"
+                      break
+                  }
+              }
           }
-          else {
+          
+          if (-not $commitType) {
               Write-Host "[WARNING] No commit type detected in: $messageToCheck"
               Write-Host "[INFO] Will use branch-based detection or default to patch"
           }
@@ -140,14 +177,28 @@ jobs:
           
           Write-Host "`n[RUNNING] smart version bump..."
           Write-Host "[INFO] Script path: $scriptPath"
-          $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -DryRun
+          Write-Host "[INFO] Branch: $sourceBranch"
+          Write-Host "[INFO] Commit type detected: $commitType"
+          
+          # Pass the detected type if we found one
+          if ($commitType) {
+              $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -Type $commitType -DryRun
+          }
+          else {
+              $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -DryRun
+          }
           
           if ($LASTEXITCODE -eq 0) {
               Write-Host "`n[OK] Version analysis complete"
               
               # Now run the actual bump
               Write-Host "`n[APPLYING] version bump..."
-              & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage
+              if ($commitType) {
+                  & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -Type $commitType
+              }
+              else {
+                  & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage
+              }
               
               if ($LASTEXITCODE -eq 0) {
                   # Commit version changes
