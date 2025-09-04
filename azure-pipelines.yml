@@ -180,7 +180,7 @@ jobs:
           Write-Host "⏳ Waiting 15 seconds before starting status monitoring..."
           Start-Sleep -Seconds 15
     
-    # STAP 2: Monitor BEIDE deployments parallel
+# STAP 2: Monitor BEIDE deployments parallel
     - task: PowerShell@2
       displayName: "📊 Monitor Parallel Deployments"
       inputs:
@@ -221,7 +221,6 @@ jobs:
           # Monitor both deployments
           while ($attempt -lt $maxAttempts) {
               $attempt++
-              $allComplete = $true
               
               Write-Host "`n════════════════════════════════════════════════"
               Write-Host " Check $attempt/$maxAttempts"
@@ -272,21 +271,31 @@ jobs:
                                       }
                                       default {
                                           Write-Host "  ⏳ Still deploying..."
-                                          $allComplete = $false
                                       }
                                   }
+                              } else {
+                                  Write-Host "  ⚠️ No deployment data found"
                               }
+                          } else {
+                              Write-Host "  ⚠️ Empty response from API"
                           }
                       } catch {
                           Write-Host "  ⚠️ Error checking status: $_"
-                          $allComplete = $false
                       }
                   } else {
                       Write-Host "`n✅ $($service.Name): Already complete"
                   }
               }
               
-              # Check if all services are complete
+              # Check if all services are complete AFTER checking all services
+              $allComplete = $true
+              foreach ($service in $services) {
+                  if (-not $service.Complete) {
+                      $allComplete = $false
+                      break
+                  }
+              }
+              
               if ($allComplete) {
                   Write-Host "`n🎉 All deployments complete!"
                   break
@@ -310,7 +319,7 @@ jobs:
           }
           
           Write-Host "`n✅ Both services successfully deployed!"
-    
+              
     # STAP 3: Health checks voor beide services
     - task: PowerShell@2
       displayName: "🏥 Verify Health Status"
