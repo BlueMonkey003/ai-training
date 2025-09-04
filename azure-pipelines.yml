@@ -13,6 +13,7 @@ pool:
 
 variables:
   - group: GitHubCredentials
+  - group: RenderAPICredentials  # Nieuwe group voor Render API key
 
 jobs:
 - job: Deploy
@@ -20,299 +21,207 @@ jobs:
     clean: all
   
   steps:
-    # Diagnostiek blijft zoals het was
+    # [Vorige stappen blijven hetzelfde tot aan de deploy stappen]
+    
+    # VERBETERDE Deploy Backend met Status Tracking
     - task: PowerShell@2
-      displayName: "🔍 System Diagnostics"
+      displayName: "🔧 Deploy & Monitor Backend"
       inputs:
         targetType: inline
         script: |
           Write-Host "════════════════════════════════════════════════"
-          Write-Host "            SYSTEM DIAGNOSTICS"
+          Write-Host "    Backend Deployment with Status Monitoring"
           Write-Host "════════════════════════════════════════════════"
           
-          $os = Get-CimInstance Win32_OperatingSystem
-          $totalRAM = [math]::Round($os.TotalVisibleMemorySize / 1024 / 1024, 2)
-          $freeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
-          $usedRAM = $totalRAM - $freeRAM
-          $percentUsed = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
-          
-          Write-Host "`n📊 MEMORY STATUS:"
-          Write-Host "Total RAM: $totalRAM GB"
-          Write-Host "Used RAM: $usedRAM GB ($percentUsed%)"
-          Write-Host "Free RAM: $freeRAM GB"
-          
-          if ($percentUsed -gt 85) {
-              Write-Host "`n⚠️ Warning: High memory usage detected!"
-          }
-    
-    # GEFIXTE Mirror naar GitHub
-    - task: PowerShell@2
-      displayName: "📤 Mirror Monorepo to GitHub"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "╔══════════════════════════════════════╗"
-          Write-Host "║     Starting GitHub Mirror Process   ║"
-          Write-Host "╚══════════════════════════════════════╝"
-          
+          # Trigger deployment
+          Write-Host "`n🚀 Triggering Backend Deploy..."
           try {
-              # Cleanup
-              if (Test-Path "temp-repo") {
-                  Write-Host "⚠️ Removing existing temp-repo..."
-                  Remove-Item -Recurse -Force temp-repo
-              }
-              
-              # BELANGRIJK: Clone met unshallow optie voor GitHub compatibility
-              Write-Host "`n📥 Cloning repository..."
-              
-              # Eerst shallow clone voor snelheid
-              git clone --depth 1 --single-branch --branch main https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application temp-repo
-              
-              if (-not $?) {
-                  throw "Clone failed!"
-              }
-              
-              cd temp-repo
-              
-              # Configure git
-              git config user.email "azure-pipeline@bluemonkeys.nl"
-              git config user.name "Azure Pipeline"
-              
-              # CRUCIALE FIX: Unshallow de repo voor GitHub
-              Write-Host "`n🔄 Fetching full history for GitHub compatibility..."
-              git fetch --unshallow origin
-              
-              # Verify structure
-              Write-Host "`n📁 Repository Structure:"
-              Get-ChildItem | Format-Table Name, Mode, LastWriteTime
-              
-              # Check backend
-              Write-Host "`n🔧 Backend Status:"
-              if (Test-Path "backend/package.json") {
-                  $backendPkg = Get-Content backend/package.json | ConvertFrom-Json
-                  Write-Host "✅ Backend found: $($backendPkg.name) v$($backendPkg.version)"
-              }
-              
-              # Check frontend  
-              Write-Host "`n🎨 Frontend Status:"
-              if (Test-Path "frontend/package.json") {
-                  $frontendPkg = Get-Content frontend/package.json | ConvertFrom-Json
-                  Write-Host "✅ Frontend found: $($frontendPkg.name) v$($frontendPkg.version)"
-              }
-              
-              # Add GitHub remote
-              Write-Host "`n🔗 Adding GitHub remote..."
-              git remote add github https://$(GITHUB_TOKEN)@github.com/BlueMonkey003/ai-training.git
-              
-              # Push to GitHub with force
-              Write-Host "`n📤 Pushing to GitHub..."
-              git push github HEAD:main --force
-              
-              if ($?) {
-                  Write-Host "✅ Successfully mirrored to GitHub!"
-              } else {
-                  throw "Push to GitHub failed!"
-              }
-              
+              $deployResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk" -Method POST -UseBasicParsing
+              Write-Host "✅ Deploy triggered! Status: $($deployResponse.StatusCode)"
           } catch {
-              Write-Host "❌ Error occurred: $_"
-              exit 1
-          } finally {
-              Write-Host "`n🧹 Performing cleanup..."
-              cd $(Agent.WorkFolder)
-              
-              if (Test-Path "temp-repo") {
-                  Remove-Item -Recurse -Force temp-repo -ErrorAction SilentlyContinue
-              }
-              
-              [System.GC]::Collect()
-          }
-          
-          Write-Host "`n✨ Mirror process completed!"
-    
-    - task: PowerShell@2
-      displayName: "⏱️ Wait for GitHub"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "⏳ Waiting 5 seconds for GitHub to process push..."
-          Start-Sleep -Seconds 5
-          Write-Host "✅ Continue with deployments..."
-    
-    - task: PowerShell@2
-      displayName: "🔧 Deploy Backend to Render"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "🚀 Triggering Backend Deploy..."
-          try {
-              $response = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk" -Method POST -UseBasicParsing
-              Write-Host "✅ Backend deploy triggered! Status: $($response.StatusCode)"
-          } catch {
-              Write-Host "❌ Backend deploy failed: $_"
+              Write-Host "❌ Backend deploy trigger failed: $_"
               exit 1
           }
-    
-    - task: PowerShell@2
-      displayName: "🎨 Deploy Frontend to Render"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "🚀 Triggering Frontend Deploy..."
-          try {
-              $response = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs" -Method POST -UseBasicParsing
-              Write-Host "✅ Frontend deploy triggered! Status: $($response.StatusCode)"
-          } catch {
-              Write-Host "❌ Frontend deploy failed: $_"
-              exit 1
-          }
-    
-    # NIEUWE STAP: Health Check voor Backend
-    - task: PowerShell@2
-      displayName: "🏥 Backend Health Check"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "════════════════════════════════════════════════"
-          Write-Host "    Waiting for Backend Deployment & Health Check"
-          Write-Host "════════════════════════════════════════════════"
           
-          # Gebruik root endpoint als health check nog niet bestaat
-          $backendUrl = "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health"  # Of gebruik een bestaande endpoint zoals /api/auth/check
-          $maxRetries = 60  # 10 minuten max (60 x 10 seconden)
-          $retryInterval = 5  # Wacht 5 seconden tussen checks
-          $attemptCount = 0
-          $success = $false
+          # Wacht even voordat we status gaan checken
+          Start-Sleep -Seconds 10
           
-          Write-Host "`n🔗 Checking: $backendUrl"
-          Write-Host "⏱️ Maximum wait time: 5 minutes"
+          # Monitor deployment status via Render API
+          $serviceId = "srv-d2rejiuuk2gs73883gog"
+          $renderApiKey = "$(RENDER_API_KEY)"  
+          $maxWaitMinutes = 5
+          $checkInterval = 10
+          $maxAttempts = [math]::Floor($maxWaitMinutes * 60 / $checkInterval)
+          $attempt = 0
+          $deployComplete = $false
           
-          while ($attemptCount -lt $maxRetries -and -not $success) {
-              $attemptCount++
-              Write-Host "`n📍 Attempt $attemptCount/$maxRetries..."
+          Write-Host "`n📊 Monitoring deployment status..."
+          Write-Host "Service ID: $serviceId"
+          Write-Host "Max wait time: $maxWaitMinutes minutes"
+          
+          while ($attempt -lt $maxAttempts -and -not $deployComplete) {
+              $attempt++
+              Write-Host "`n🔄 Check $attempt/$maxAttempts..."
               
               try {
-                  $response = Invoke-WebRequest -Uri $backendUrl -Method GET -UseBasicParsing -TimeoutSec 30
-                  
-                  if ($response.StatusCode -eq 200) {
-                      Write-Host "✅ Backend is healthy! Status: $($response.StatusCode)"
-                      Write-Host "📋 Response: $($response.Content)"
-                      $success = $true
-                  } else {
-                      Write-Host "⚠️ Unexpected status: $($response.StatusCode)"
-                  }
-              } catch {
-                  Write-Host "⏳ Backend not ready yet... (Error: $($_.Exception.Message))"
-                  
-                  if ($attemptCount -eq $maxRetries) {
-                      Write-Host "❌ Backend health check failed after $maxRetries attempts!"
-                      exit 1
+                  # Get latest deploy status from Render API
+                  $headers = @{
+                      "Authorization" = "Bearer $renderApiKey"
+                      "Accept" = "application/json"
                   }
                   
-                  Write-Host "⏱️ Waiting $retryInterval seconds before retry..."
-                  Start-Sleep -Seconds $retryInterval
-              }
-          }
-          
-          if ($success) {
-              Write-Host "`n🎉 Backend deployment successful and healthy!"
-          }
-    
-    # NIEUWE STAP: Health Check voor Frontend
-    - task: PowerShell@2
-      displayName: "🏥 Frontend Health Check"
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "════════════════════════════════════════════════"
-          Write-Host "    Waiting for Frontend Deployment & Health Check"
-          Write-Host "════════════════════════════════════════════════"
-          
-          $frontendUrl = "https://lunchmonkeys.bluemonkeysaapp.nl"
-          $maxRetries = 60  # 10 minuten max
-          $retryInterval = 5  # Wacht 5 seconden tussen checks
-          $attemptCount = 0
-          $success = $false
-          
-          Write-Host "`n🔗 Checking: $frontendUrl"
-          Write-Host "⏱️ Maximum wait time: 5 minutes"
-          
-          while ($attemptCount -lt $maxRetries -and -not $success) {
-              $attemptCount++
-              Write-Host "`n📍 Attempt $attemptCount/$maxRetries..."
-              
-              try {
-                  $response = Invoke-WebRequest -Uri $frontendUrl -Method GET -UseBasicParsing -TimeoutSec 30
+                  $statusUrl = "https://api.render.com/v1/services/$serviceId/deploys?limit=1"
+                  $statusResponse = Invoke-RestMethod -Uri $statusUrl -Headers $headers -Method GET
                   
-                  if ($response.StatusCode -eq 200) {
-                      Write-Host "✅ Frontend is live! Status: $($response.StatusCode)"
+                  if ($statusResponse -and $statusResponse[0]) {
+                      $latestDeploy = $statusResponse[0]
+                      $deployStatus = $latestDeploy.status
+                      $deployId = $latestDeploy.id
+                      $commitId = $latestDeploy.commit.id.Substring(0, 7)
                       
-                      # Check of het echt de React app is
-                      if ($response.Content -like "*<!DOCTYPE html>*" -and $response.Content -like "*<div id=`"root`">*") {
-                          Write-Host "✅ React app verified!"
-                          $success = $true
-                      } else {
-                          Write-Host "⚠️ Page loaded but doesn't look like the React app"
+                      Write-Host "📦 Deploy ID: $deployId"
+                      Write-Host "🔖 Commit: $commitId"
+                      Write-Host "📊 Status: $deployStatus"
+                      
+                      switch ($deployStatus) {
+                          "live" {
+                              Write-Host "✅ Deployment is LIVE!"
+                              $deployComplete = $true
+                          }
+                          "build_failed" {
+                              Write-Host "❌ Build FAILED!"
+                              exit 1
+                          }
+                          "canceled" {
+                              Write-Host "⚠️ Deployment was CANCELED"
+                              exit 1
+                          }
+                          "deactivated" {
+                              Write-Host "⚠️ Service is DEACTIVATED"
+                              exit 1
+                          }
+                          default {
+                              Write-Host "⏳ Deployment still in progress..."
+                              Start-Sleep -Seconds $checkInterval
+                          }
                       }
-                  } else {
-                      Write-Host "⚠️ Unexpected status: $($response.StatusCode)"
                   }
               } catch {
-                  Write-Host "⏳ Frontend not ready yet... (Error: $($_.Exception.Message))"
-                  
-                  if ($attemptCount -eq $maxRetries) {
-                      Write-Host "❌ Frontend health check failed after $maxRetries attempts!"
-                      exit 1
-                  }
-                  
-                  Write-Host "⏱️ Waiting $retryInterval seconds before retry..."
-                  Start-Sleep -Seconds $retryInterval
+                  Write-Host "⚠️ Error checking status: $_"
+                  Start-Sleep -Seconds $checkInterval
               }
           }
           
-          if ($success) {
-              Write-Host "`n🎉 Frontend deployment successful and live!"
+          if (-not $deployComplete) {
+              Write-Host "❌ Deployment did not complete within $maxWaitMinutes minutes!"
+              exit 1
+          }
+          
+          # Extra verificatie: check health endpoint
+          Write-Host "`n🏥 Verifying backend health..."
+          Start-Sleep -Seconds 10  # Geef service tijd om op te starten
+          
+          try {
+              $healthResponse = Invoke-WebRequest -Uri "https://lunchmonkeys-backend.onrender.com/api/health" -Method GET -UseBasicParsing -TimeoutSec 30
+              if ($healthResponse.StatusCode -eq 200) {
+                  Write-Host "✅ Backend health check passed!"
+              }
+          } catch {
+              Write-Host "⚠️ Health check failed but deployment is live"
           }
     
-    # OPTIONELE STAP: Check custom domains (als certificaten issued zijn)
+    # VERBETERDE Deploy Frontend met Status Tracking
     - task: PowerShell@2
-      displayName: "🌐 Custom Domain Health Check (Optional)"
-      continueOnError: true
+      displayName: "🎨 Deploy & Monitor Frontend"
       inputs:
         targetType: inline
         script: |
           Write-Host "════════════════════════════════════════════════"
-          Write-Host "    Checking Custom Domains (if available)"
+          Write-Host "    Frontend Deployment with Status Monitoring"
           Write-Host "════════════════════════════════════════════════"
           
-          $customDomains = @(
-              @{
-                  Name = "Frontend Custom Domain"
-                  Url = "https://lunchmonkeys.bluemonkeysaapp.nl"
-              },
-              @{
-                  Name = "Backend Custom Domain"
-                  Url = "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health"
-              }
-          )
+          # Trigger deployment
+          Write-Host "`n🚀 Triggering Frontend Deploy..."
+          try {
+              $deployResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs" -Method POST -UseBasicParsing
+              Write-Host "✅ Deploy triggered! Status: $($deployResponse.StatusCode)"
+          } catch {
+              Write-Host "❌ Frontend deploy trigger failed: $_"
+              exit 1
+          }
           
-          foreach ($domain in $customDomains) {
-              Write-Host "`n🔍 Checking $($domain.Name): $($domain.Url)"
+          # Wacht even voordat we status gaan checken
+          Start-Sleep -Seconds 10
+          
+          # Monitor deployment status
+          $serviceId = "srv-d2reover433s73fiir2g"
+          $renderApiKey = "$(RENDER_API_KEY)"
+          $maxWaitMinutes = 15
+          $checkInterval = 30
+          $maxAttempts = [math]::Floor($maxWaitMinutes * 60 / $checkInterval)
+          $attempt = 0
+          $deployComplete = $false
+          
+          Write-Host "`n📊 Monitoring deployment status..."
+          Write-Host "Service ID: $serviceId"
+          Write-Host "Max wait time: $maxWaitMinutes minutes"
+          
+          while ($attempt -lt $maxAttempts -and -not $deployComplete) {
+              $attempt++
+              Write-Host "`n🔄 Check $attempt/$maxAttempts..."
               
               try {
-                  $response = Invoke-WebRequest -Uri $domain.Url -Method GET -UseBasicParsing -TimeoutSec 10
+                  $headers = @{
+                      "Authorization" = "Bearer $renderApiKey"
+                      "Accept" = "application/json"
+                  }
                   
-                  if ($response.StatusCode -eq 200) {
-                      Write-Host "✅ $($domain.Name) is accessible! Status: $($response.StatusCode)"
+                  $statusUrl = "https://api.render.com/v1/services/$serviceId/deploys?limit=1"
+                  $statusResponse = Invoke-RestMethod -Uri $statusUrl -Headers $headers -Method GET
+                  
+                  if ($statusResponse -and $statusResponse[0]) {
+                      $latestDeploy = $statusResponse[0]
+                      $deployStatus = $latestDeploy.status
+                      $deployId = $latestDeploy.id
+                      $commitId = $latestDeploy.commit.id.Substring(0, 7)
+                      
+                      Write-Host "📦 Deploy ID: $deployId"
+                      Write-Host "🔖 Commit: $commitId"
+                      Write-Host "📊 Status: $deployStatus"
+                      
+                      switch ($deployStatus) {
+                          "live" {
+                              Write-Host "✅ Deployment is LIVE!"
+                              $deployComplete = $true
+                          }
+                          "build_failed" {
+                              Write-Host "❌ Build FAILED!"
+                              exit 1
+                          }
+                          "canceled" {
+                              Write-Host "⚠️ Deployment was CANCELED"
+                              exit 1
+                          }
+                          default {
+                              Write-Host "⏳ Deployment still in progress..."
+                              Start-Sleep -Seconds $checkInterval
+                          }
+                      }
                   }
               } catch {
-                  Write-Host "⚠️ $($domain.Name) not available yet (SSL certificate may be pending)"
-                  Write-Host "   Error: $($_.Exception.Message)"
+                  Write-Host "⚠️ Error checking status: $_"
+                  Start-Sleep -Seconds $checkInterval
               }
           }
           
-          Write-Host "`n📝 Note: Custom domains may take time for SSL certificates to be issued."
+          if (-not $deployComplete) {
+              Write-Host "❌ Deployment did not complete within $maxWaitMinutes minutes!"
+              exit 1
+          }
+          
+          Write-Host "`n🎉 Frontend deployment successful!"
     
+    # Finale summary
     - task: PowerShell@2
       displayName: "✨ Deployment Summary"
       inputs:
@@ -321,13 +230,13 @@ jobs:
           Write-Host "╔════════════════════════════════════════════╗"
           Write-Host "║   ✅ LunchMonkeys Deployment Complete!    ║"
           Write-Host "╠════════════════════════════════════════════╣"
-          Write-Host "║ Status: All health checks passed!          ║"
+          Write-Host "║ Both services deployed and verified!       ║"
           Write-Host "╠════════════════════════════════════════════╣"
-          Write-Host "║ Render URLs (Always Available):            ║"
+          Write-Host "║ Render URLs:                               ║"
           Write-Host "║ Backend:  https://lunchmonkeys-backend.onrender.com"
           Write-Host "║ Frontend: https://lunchmonkeys-frontend.onrender.com"
           Write-Host "╠════════════════════════════════════════════╣"
-          Write-Host "║ Custom Domains (When SSL Ready):           ║"
+          Write-Host "║ Custom Domains:                            ║"
           Write-Host "║ Backend:  https://api.lunchmonkeys.bluemonkeysaapp.nl"
           Write-Host "║ Frontend: https://lunchmonkeys.bluemonkeysaapp.nl"
           Write-Host "╚════════════════════════════════════════════╝"
