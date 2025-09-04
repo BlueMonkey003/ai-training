@@ -62,12 +62,12 @@ jobs:
           
           # Check of dit een PR merge is
           if ($commitMessage -match "Merged PR #\d+") {
-              Write-Host "🔍 Detected PR merge"
+              Write-Host "[INFO] Detected PR merge"
               # Probeer branch naam uit PR merge commit te halen
               $prInfo = git log -1 --pretty=%b
               if ($prInfo -match 'from ([^\s]+)') {
                   $sourceBranch = $matches[1]
-                  Write-Host "📌 Source branch: $sourceBranch"
+                  Write-Host "[INFO] Source branch: $sourceBranch"
               }
           }
           
@@ -77,25 +77,25 @@ jobs:
           # Check voor conventional commit format
           if ($commitMessage -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:') {
               $commitType = $matches[1]
-              Write-Host "🏷️ Conventional commit type: $commitType"
+              Write-Host "[TYPE] Conventional commit type: $commitType"
           }
           # Check voor emoji-based format (uit auto-pr.ps1)
           elseif ($commitMessage -match '^[^\s]+ (feat|fix|chore):') {
               $commitType = $matches[1]
-              Write-Host "🏷️ Emoji commit type: $commitType"
+              Write-Host "[TYPE] Emoji commit type: $commitType"
           }
           
           # Run smart version bump script
           $scriptPath = Join-Path $env:BUILD_SOURCESDIRECTORY "scripts\smart-version-bump.ps1"
           
-          Write-Host "`n🚀 Running smart version bump..."
+          Write-Host "`n[RUNNING] smart version bump..."
           $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -DryRun
           
           if ($LASTEXITCODE -eq 0) {
-              Write-Host "`n✅ Version analysis complete"
+              Write-Host "`n[OK] Version analysis complete"
               
               # Now run the actual bump
-              Write-Host "`n📝 Applying version bump..."
+              Write-Host "`n[APPLYING] version bump..."
               & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage
               
               if ($LASTEXITCODE -eq 0) {
@@ -105,11 +105,11 @@ jobs:
                   git add version.json frontend/package.json backend/package.json
                   git commit -m "chore: bump version [skip ci]"
                   
-                  Write-Host "✅ Version updated successfully!"
+                  Write-Host "[SUCCESS] Version updated successfully!"
               }
           }
           else {
-              Write-Host "⚠️ Version bump skipped or failed"
+              Write-Host "[WARNING] Version bump skipped or failed"
           }
     
     # Rest van de pipeline blijft hetzelfde...
