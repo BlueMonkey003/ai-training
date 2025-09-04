@@ -67,11 +67,15 @@ jobs:
           if ($isPRMerge) {
               Write-Host "[INFO] Detected PR merge"
               # Probeer branch naam uit PR merge commit te halen
-              $prInfo = git log -1 --pretty=%b
-              $branchMatch = $prInfo -match 'from ([^\s]+)'
-              if ($branchMatch) {
-                  $sourceBranch = $matches[1]
-                  Write-Host "[INFO] Source branch: $sourceBranch"
+              try {
+                  $prInfo = git log -1 --pretty=%b
+                  if ($prInfo -match 'from ([^\s]+)') {
+                      $sourceBranch = [string]$matches[1]
+                      Write-Host "[INFO] Source branch: $sourceBranch"
+                  }
+              }
+              catch {
+                  Write-Host "[WARNING] Could not extract source branch"
               }
           }
           
@@ -82,35 +86,45 @@ jobs:
           $messageToCheck = $commitMessage
           if ($isPRMerge) {
               # Extract het deel na "Merged PR #: " of "Merged PR 15: "
-              $prTitleMatch = $commitMessage -match 'Merged PR #?\d+:\s*(.+)$'
-              if ($prTitleMatch) {
-                  $messageToCheck = $matches[1].Trim()
-                  Write-Host "[DEBUG] PR title: $messageToCheck"
+              # Azure DevOps heeft soms issues met $matches scope, dus we doen het stap voor stap
+              try {
+                  if ($commitMessage -match 'Merged PR #?\d+:\s*(.+)$') {
+                      # Sla de match direct op om scope issues te voorkomen
+                      $prTitle = $matches[1]
+                      if ($prTitle) {
+                          $messageToCheck = $prTitle.Trim()
+                          Write-Host "[DEBUG] PR title: $messageToCheck"
+                      }
+                  }
+                  else {
+                      Write-Host "[WARNING] Could not extract PR title from: $commitMessage"
+                  }
+              }
+              catch {
+                  Write-Host "[ERROR] Failed to parse PR title: $_"
+                  Write-Host "[INFO] Using full commit message instead"
               }
           }
           
           # Check voor conventional commit format
-          $conventionalMatch = $messageToCheck -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:'
-          if ($conventionalMatch) {
-              $commitType = $matches[1]
+          if ($messageToCheck -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:') {
+              $commitType = [string]$matches[1]
               Write-Host "[TYPE] Conventional commit type: $commitType"
           }
-          else {
+          elseif ($messageToCheck -match '^[^\s]+ (feat|fix|chore):') {
               # Check voor emoji-based format (uit auto-pr.ps1)
               # Match emoji gevolgd door type: bv "✨ feat:" of "🔧 fix:"
-              $emojiMatch = $messageToCheck -match '^[^\s]+ (feat|fix|chore):'
-              if ($emojiMatch) {
-                  $commitType = $matches[1]
-                  Write-Host "[TYPE] Emoji commit type: $commitType"
-              }
-              else {
-                  # Fallback: zoek overal in de message naar type keywords
-                  $fallbackMatch = $messageToCheck -match '\b(feat|fix|chore)\b'
-                  if ($fallbackMatch) {
-                      $commitType = $matches[1]
-                      Write-Host "[TYPE] Fallback type detection: $commitType"
-                  }
-              }
+              $commitType = [string]$matches[1]
+              Write-Host "[TYPE] Emoji commit type: $commitType"
+          }
+          elseif ($messageToCheck -match '\b(feat|fix|chore)\b') {
+              # Fallback: zoek overal in de message naar type keywords
+              $commitType = [string]$matches[1]
+              Write-Host "[TYPE] Fallback type detection: $commitType"
+          }
+          else {
+              Write-Host "[WARNING] No commit type detected in: $messageToCheck"
+              Write-Host "[INFO] Will use branch-based detection or default to patch"
           }
           
           # Run smart version bump script
