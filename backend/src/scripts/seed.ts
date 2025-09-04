@@ -2,8 +2,30 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { User } from '../models/User.model';
 import { Restaurant } from '../models/Restaurant.model';
+import path from 'path';
 
-dotenv.config();
+// Load environment variables - try multiple locations
+const possibleEnvFiles = [
+  path.join(__dirname, '../../.env.development'),
+  path.join(__dirname, '../../.env'),
+  '.env.development',
+  '.env'
+];
+
+let envLoaded = false;
+for (const envFile of possibleEnvFiles) {
+  const result = dotenv.config({ path: envFile });
+  if (!result.error) {
+    console.log(`✅ Loaded environment from: ${envFile}`);
+    envLoaded = true;
+    break;
+  }
+}
+
+if (!envLoaded) {
+  console.error('❌ No .env file found! Please create .env or .env.development');
+  process.exit(1);
+}
 
 const seedData = async () => {
   try {
@@ -70,7 +92,7 @@ const seedData = async () => {
     console.log('- Admin: admin@lunchmonkeys.nl / admin123');
     console.log('- Employee 1: jan@lunchmonkeys.nl / test123');
     console.log('- Employee 2: marie@lunchmonkeys.nl / test123');
-    
+
     process.exit(0);
   } catch (error) {
     console.error('Error:', error);

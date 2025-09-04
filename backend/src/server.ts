@@ -25,6 +25,11 @@ import { setupSocketHandlers } from "./sockets/socketHandlers";
 // Error middleware
 import { errorHandler } from "./middleware/error.middleware";
 
+// Set default NODE_ENV if not specified
+if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'development';
+}
+
 // Load environment variables based on NODE_ENV
 const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.development";
 dotenv.config({ path: envFile });
@@ -128,7 +133,17 @@ app.use(errorHandler);
 // MongoDB connectie
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI!);
+        let mongoUri = process.env.MONGO_URI!;
+
+        // In productie, gebruik lunchmonkeys-prod database
+        if (process.env.NODE_ENV === 'production' && mongoUri.includes('/lunchmonkeys')) {
+            mongoUri = mongoUri.replace('/lunchmonkeys', '/lunchmonkeys-prod');
+            console.log("🏭 Using production database: lunchmonkeys-prod");
+        } else {
+            console.log("🔧 Using development database: lunchmonkeys");
+        }
+
+        await mongoose.connect(mongoUri);
         console.log("✅ MongoDB verbonden");
     } catch (error) {
         console.error("❌ MongoDB connectie fout:", error);

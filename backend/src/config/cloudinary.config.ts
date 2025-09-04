@@ -4,6 +4,11 @@ import { Request } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 
+// Set default NODE_ENV if not specified
+if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'development';
+}
+
 // Load environment variables based on NODE_ENV
 const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.development";
 dotenv.config({ path: envFile });
