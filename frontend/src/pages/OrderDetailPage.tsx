@@ -164,14 +164,17 @@ export default function OrderDetailPage() {
             {/* Restaurant Info */}
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle>{restaurant.name}</CardTitle>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                        <div className="flex-1">
+                            <CardTitle className="text-xl sm:text-2xl">{restaurant.name}</CardTitle>
                             <CardDescription>
-                                <div className="flex items-center space-x-2 mt-2">
-                                    <Clock className="h-4 w-4" />
-                                    <span>
-                                        {new Date(order.createdAt).toLocaleString('nl-NL')} -
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-2">
+                                    <div className="flex items-center space-x-1">
+                                        <Clock className="h-4 w-4" />
+                                        <span className="text-sm">{new Date(order.createdAt).toLocaleString('nl-NL')}</span>
+                                    </div>
+                                    <span className="hidden sm:inline">-</span>
+                                    <span className="text-sm">
                                         Status: <span className={order.status === 'open' ? 'text-green-600' : 'text-red-600'}>
                                             {order.status === 'open' ? 'Open' : 'Gesloten'}
                                         </span>
@@ -180,7 +183,7 @@ export default function OrderDetailPage() {
                             </CardDescription>
                         </div>
                         {isAdmin && order.status === 'open' && (
-                            <Button variant="destructive" onClick={handleCloseOrder}>
+                            <Button variant="destructive" onClick={handleCloseOrder} className="w-full sm:w-auto">
                                 Sluit Bestelling
                             </Button>
                         )}

@@ -100,10 +100,10 @@ export default function NotificationsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Notificaties</h1>
-                    <p className="mt-2 text-gray-600">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Notificaties</h1>
+                    <p className="mt-2 text-sm sm:text-base text-gray-600">
                         {unreadCount > 0
                             ? `Je hebt ${unreadCount} ongelezen notificatie${unreadCount > 1 ? 's' : ''}`
                             : 'Alle notificaties zijn gelezen'
@@ -112,9 +112,10 @@ export default function NotificationsPage() {
                 </div>
 
                 {unreadCount > 0 && (
-                    <Button onClick={handleMarkAllAsRead} variant="outline">
+                    <Button onClick={handleMarkAllAsRead} variant="outline" className="w-full sm:w-auto">
                         <CheckCheck className="h-4 w-4 mr-2" />
-                        Markeer alles als gelezen
+                        <span className="hidden sm:inline">Markeer alles als gelezen</span>
+                        <span className="sm:hidden">Alles gelezen</span>
                     </Button>
                 )}
             </div>
