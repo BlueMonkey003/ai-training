@@ -9,7 +9,7 @@ param(
     [string]$CommitMessage = "",
     
     [Parameter(Mandatory = $false)]
-    [ValidateSet("major", "minor", "patch", "auto")]
+    [ValidateSet("major", "minor", "patch", "auto", "feat", "fix", "chore")]
     [string]$Type = "auto",
     
     [Parameter(Mandatory = $false)]
@@ -70,7 +70,12 @@ try {
     # Determine version bump type
     $bumpType = $Type
     
-    if ($Type -eq "auto") {
+    # Convert conventional commit types to version bump types
+    if ($Type -eq "feat") { $bumpType = "minor" }
+    elseif ($Type -eq "fix") { $bumpType = "patch" }
+    elseif ($Type -eq "chore") { $bumpType = "patch" }
+    
+    if ($bumpType -eq "auto") {
         # Try branch name first
         if ($BranchName) {
             $bumpType = Get-ChangeTypeFromBranch -branch $BranchName
