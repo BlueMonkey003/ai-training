@@ -18,6 +18,7 @@ import restaurantRoutes from "./routes/restaurant.routes";
 import orderRoutes from "./routes/order.routes";
 import notificationRoutes from "./routes/notification.routes";
 import uploadRoutes from "./routes/upload.routes";
+import healthRoutes from "./routes/health.routes";
 
 // Socket handlers
 import { setupSocketHandlers } from "./sockets/socketHandlers";
@@ -82,7 +83,7 @@ const swaggerOptions = {
             },
         },
     },
-    apis: ["./src/routes/*.ts"], // Pad naar de route bestanden
+    apis: ["./src/routes/*.ts", "./src/controllers/*.ts"], // Pad naar de route en controller bestanden
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
@@ -91,7 +92,7 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minuten
     max: process.env.NODE_ENV === "development" ? 1000 : 100,
-    skip: (req) => req.path === "/health", // Health check overslaan
+    skip: (req) => req.path === "/api/health", // Health check overslaan
 });
 
 // Middleware
@@ -118,11 +119,7 @@ app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
-
-// Health check
-app.get("/health", (req, res) => {
-    res.json({ status: "OK", timestamp: new Date().toISOString() });
-});
+app.use("/api/health", healthRoutes);
 
 // Socket.IO handlers
 setupSocketHandlers(io);
