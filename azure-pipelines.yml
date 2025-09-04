@@ -58,9 +58,19 @@ jobs:
           
           # Get commit info
           $commitMessage = git log -1 --pretty=%B
+          # Voor veiligheid: neem alleen de eerste regel en trim
+          $commitMessageFirstLine = ($commitMessage -split "`n")[0].Trim()
+          
+          # Extra veiligheidscontrole
+          if ([string]::IsNullOrWhiteSpace($commitMessageFirstLine)) {
+              $commitMessageFirstLine = "No commit message"
+              Write-Host "[WARNING] Commit message was empty, using default"
+          }
+          
           $sourceBranch = ""
           
-          Write-Host "[DEBUG] Commit message: $commitMessage"
+          Write-Host "[DEBUG] Full commit message: $commitMessage"
+          Write-Host "[DEBUG] First line only: $commitMessageFirstLine"
           
           # Check of dit een PR merge is (met of zonder # voor PR nummer)
           $isPRMerge = $commitMessage -match "Merged PR #?\d+"
@@ -182,10 +192,10 @@ jobs:
           
           # Pass the detected type if we found one
           if ($commitType) {
-              $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -Type $commitType -DryRun
+              $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessageFirstLine -Type $commitType -DryRun
           }
           else {
-              $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -DryRun
+              $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessageFirstLine -DryRun
           }
           
           if ($LASTEXITCODE -eq 0) {
@@ -194,10 +204,10 @@ jobs:
               # Now run the actual bump
               Write-Host "`n[APPLYING] version bump..."
               if ($commitType) {
-                  & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage -Type $commitType
+                  & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessageFirstLine -Type $commitType
               }
               else {
-                  & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessage
+                  & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessageFirstLine
               }
               
               if ($LASTEXITCODE -eq 0) {
