@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:dev": "ts-node src/scripts/seed.ts",
-    "seed:prod": "ts-node src/scripts/seed-production.ts"
+    "seed:prod": "ts-node src/scripts/seed-production.ts",
+    "migrate:isactive": "NODE_ENV=production ts-node src/scripts/migrate-add-isactive.ts"
   },
   "keywords": [],
   "author": "",

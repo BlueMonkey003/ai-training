@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Bell, User, LogOut, Utensils, Building2, Menu, X } from 'lucide-react';
+import { Bell, User, LogOut, Utensils, Building2, Menu, X, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Layout() {
@@ -79,10 +79,11 @@ export default function Layout() {
 
                                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                                     <Link
-                                        to="/profile"
+                                        to="/settings"
                                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                     >
-                                        Profiel
+                                        <Settings className="inline h-4 w-4 mr-2" />
+                                        Instellingen
                                     </Link>
                                     <button
                                         onClick={handleLogout}
@@ -108,6 +109,20 @@ export default function Layout() {
                                         {unreadNotifications}
                                     </span>
                                 )}
+                            </Link>
+
+                            <Link to="/settings" className="p-1.5">
+                                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                    {user?.profileImageUrl ? (
+                                        <img
+                                            src={user.profileImageUrl}
+                                            alt={user.name}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <User className="h-5 w-5 text-gray-600" />
+                                    )}
+                                </div>
                             </Link>
 
                             <button
@@ -148,12 +163,12 @@ export default function Layout() {
                             )}
 
                             <Link
-                                to="/profile"
+                                to="/settings"
                                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                                 onClick={() => setMobileMenuOpen(false)}
                             >
-                                <User className="inline h-4 w-4 mr-2" />
-                                Profiel
+                                <Settings className="inline h-4 w-4 mr-2" />
+                                Instellingen
                             </Link>
 
                             <button

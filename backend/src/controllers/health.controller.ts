@@ -61,8 +61,18 @@ export const healthCheck = async (req: Request, res: Response) => {
         const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
         const dbName = mongoose.connection.db?.databaseName || 'unknown';
 
-        // Get package version
-        const packageJson = require('../../package.json');
+        // Get version info
+        let versionInfo;
+        try {
+            versionInfo = require('../../../version.json');
+        } catch {
+            // Fallback to package.json if version.json doesn't exist
+            const packageJson = require('../../package.json');
+            versionInfo = {
+                version: packageJson.version || '1.0.0',
+                buildNumber: 0
+            };
+        }
 
         // Determine if we're healthy
         const isHealthy = dbStatus === 'connected';
@@ -71,7 +81,8 @@ export const healthCheck = async (req: Request, res: Response) => {
             status: isHealthy ? 'healthy' : 'unhealthy',
             timestamp: new Date().toISOString(),
             service: 'lunchmonkeys-backend',
-            version: packageJson.version || '1.0.0',
+            version: versionInfo.version,
+            buildNumber: versionInfo.buildNumber,
             environment: process.env.NODE_ENV || 'development',
             database: {
                 status: dbStatus,
