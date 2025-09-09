@@ -13,8 +13,9 @@ trigger:
       - version.json
       - '**/*.md'
 
+# Microsoft-hosted agent pool
 pool:
-  name: Default
+  vmImage: 'windows-latest'  # Of 'ubuntu-latest' voor Linux
 
 variables:
   - group: GitHubCredentials
@@ -26,7 +27,7 @@ jobs:
     clean: all
   
   steps:
-    # Diagnostiek
+    # Diagnostiek - Aangepast voor Microsoft-hosted agent
     - task: PowerShell@2
       displayName: "🔍 System Diagnostics"
       inputs:
@@ -36,26 +37,51 @@ jobs:
           Write-Host "            SYSTEM DIAGNOSTICS"
           Write-Host "════════════════════════════════════════════════"
           
-          $os = Get-CimInstance Win32_OperatingSystem
-          $totalRAM = [math]::Round($os.TotalVisibleMemorySize / 1024 / 1024, 2)
-          $freeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
-          $usedRAM = $totalRAM - $freeRAM
-          $percentUsed = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
+          Write-Host "`n📊 AGENT INFORMATION:"
+          Write-Host "Agent Name: $(Agent.Name)"
+          Write-Host "Agent Version: $(Agent.Version)"
+          Write-Host "Agent OS: $(Agent.OS)"
+          Write-Host "Agent Machine Name: $(Agent.MachineName)"
           
-          Write-Host "`n📊 MEMORY STATUS:"
-          Write-Host "Total RAM: $totalRAM GB"
-          Write-Host "Used RAM: $usedRAM GB ($percentUsed%)"
-          Write-Host "Free RAM: $freeRAM GB"
-          
-          if ($percentUsed -gt 85) {
-              Write-Host "`n⚠️ Warning: High memory usage detected!"
+          # Voor Windows agents
+          if ($IsWindows -or $env:OS -eq "Windows_NT") {
+              $os = Get-CimInstance Win32_OperatingSystem
+              $totalRAM = [math]::Round($os.TotalVisibleMemorySize / 1024 / 1024, 2)
+              $freeRAM = [math]::Round($os.FreePhysicalMemory / 1024 / 1024, 2)
+              $usedRAM = $totalRAM - $freeRAM
+              $percentUsed = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
+              
+              Write-Host "`n📊 MEMORY STATUS:"
+              Write-Host "Total RAM: $totalRAM GB"
+              Write-Host "Used RAM: $usedRAM GB ($percentUsed%)"
+              Write-Host "Free RAM: $freeRAM GB"
           }
+          else {
+              Write-Host "`n📊 Running on non-Windows agent"
+          }
+          
+          Write-Host "`n📁 Working Directory: $(System.DefaultWorkingDirectory)"
+          Write-Host "Source Directory: $(Build.SourcesDirectory)"
 
-    # NIEUW: Smart Version Bump
+    # Git configuratie voor Microsoft-hosted agent
+    - task: PowerShell@2
+      displayName: "🔧 Configure Git"
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "Configuring Git for Microsoft-hosted agent..."
+          git config --global user.email "azure-pipeline@bluemonkeys.nl"
+          git config --global user.name "Azure Pipeline"
+          git config --global http.version HTTP/1.1
+          git config --global http.postBuffer 524288000
+          Write-Host "✅ Git configured"
+
+    # Smart Version Bump - werkt op beide Windows en Linux
     - task: PowerShell@2
       displayName: "🔢 Smart Version Update"
       inputs:
         targetType: inline
+        pwsh: true  # Gebruik PowerShell Core voor cross-platform compatibility
         script: |
           Write-Host "════════════════════════════════════════════════"
           Write-Host "           SMART VERSION UPDATE"
@@ -63,10 +89,8 @@ jobs:
           
           # Get commit info
           $commitMessage = git log -1 --pretty=%B
-          # Voor veiligheid: neem alleen de eerste regel en trim
           $commitMessageFirstLine = ($commitMessage -split "`n")[0].Trim()
           
-          # Extra veiligheidscontrole
           if ([string]::IsNullOrWhiteSpace($commitMessageFirstLine)) {
               $commitMessageFirstLine = "No commit message"
               Write-Host "[WARNING] Commit message was empty, using default"
@@ -77,16 +101,13 @@ jobs:
           Write-Host "[DEBUG] Full commit message: $commitMessage"
           Write-Host "[DEBUG] First line only: $commitMessageFirstLine"
           
-          # Check of dit een PR merge is (met of zonder # voor PR nummer)
+          # Check of dit een PR merge is
           $isPRMerge = $commitMessage -match "Merged PR #?\d+"
           if ($isPRMerge) {
               Write-Host "[INFO] Detected PR merge"
-              # Probeer branch naam uit PR merge commit te halen
               try {
                   $prInfo = git log -1 --pretty=%b
-                  # Zoek naar "from <branchname>" pattern
                   if ($prInfo -like "*from */*") {
-                      # Extract branch name met string manipulatie
                       $fromIndex = $prInfo.IndexOf("from ")
                       if ($fromIndex -ge 0) {
                           $afterFrom = $prInfo.Substring($fromIndex + 5)
@@ -100,45 +121,31 @@ jobs:
                           Write-Host "[INFO] Source branch: $sourceBranch"
                       }
                   }
-                  else {
-                      Write-Host "[DEBUG] No source branch found in PR body"
-                  }
               }
               catch {
                   Write-Host "[WARNING] Could not extract source branch: $_"
               }
           }
           
-          # Detecteer type uit commit message of branch
+          # Detecteer type uit commit message
           $commitType = ""
-          
-          # Voor PR merges, check in het deel na "Merged PR:"
           $messageToCheck = $commitMessage
+          
           if ($isPRMerge) {
-              # Extract het deel na "Merged PR #: " of "Merged PR 15: "
-              # Azure DevOps heeft soms issues met $matches scope, dus we doen het stap voor stap
               try {
-                  # Azure DevOps PowerShell heeft issues met $matches scope
-                  # Gebruik een alternatieve aanpak met -replace
                   $prTitle = $commitMessage -replace '^Merged PR #?\d+:\s*', ''
                   if ($prTitle -and $prTitle -ne $commitMessage) {
                       $messageToCheck = $prTitle.Trim()
                       Write-Host "[DEBUG] PR title: $messageToCheck"
                   }
-                  else {
-                      Write-Host "[WARNING] Could not extract PR title from commit message"
-                  }
               }
               catch {
                   Write-Host "[ERROR] Failed to parse PR title: $_"
-                  Write-Host "[INFO] Using full commit message instead"
               }
           }
           
           # Check voor conventional commit format
-          # Gebruik een meer defensieve aanpak voor Azure DevOps
           if ($messageToCheck -match '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?:') {
-              # Extract type uit het begin van de string
               foreach ($type in @('feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore', 'perf', 'ci', 'build', 'revert')) {
                   if ($messageToCheck -like "$type*:*") {
                       $commitType = $type
@@ -148,9 +155,8 @@ jobs:
               }
           }
           
-          # Als nog geen type gevonden, check emoji format
+          # Check emoji format als geen type gevonden
           if (-not $commitType) {
-              # Check voor emoji-based format
               if ($messageToCheck -match '^[^\s]+ (feat|fix|chore):') {
                   foreach ($type in @('feat', 'fix', 'chore')) {
                       if ($messageToCheck -like "* $type`:*") {
@@ -162,9 +168,8 @@ jobs:
               }
           }
           
-          # Als nog steeds geen type, fallback
+          # Fallback keyword search
           if (-not $commitType) {
-              # Simpele keyword search
               foreach ($type in @('feat', 'fix', 'chore')) {
                   if ($messageToCheck -like "*$type*") {
                       $commitType = $type
@@ -175,27 +180,32 @@ jobs:
           }
           
           if (-not $commitType) {
-              Write-Host "[WARNING] No commit type detected in: $messageToCheck"
+              Write-Host "[WARNING] No commit type detected"
               Write-Host "[INFO] Will use branch-based detection or default to patch"
           }
           
           # Run smart version bump script
-          $scriptPath = Join-Path $env:BUILD_SOURCESDIRECTORY "scripts\smart-version-bump.ps1"
+          $scriptPath = Join-Path $env:BUILD_SOURCESDIRECTORY "scripts/smart-version-bump.ps1"
+          
+          # Check met platform-onafhankelijke path separator
+          if (-not (Test-Path $scriptPath)) {
+              $scriptPath = Join-Path $env:BUILD_SOURCESDIRECTORY "scripts\smart-version-bump.ps1"
+          }
           
           if (-not (Test-Path $scriptPath)) {
               Write-Host "[ERROR] Version bump script not found at: $scriptPath"
               Write-Host "[INFO] Current directory: $(Get-Location)"
-              Write-Host "[INFO] Directory contents:"
-              Get-ChildItem -Path $env:BUILD_SOURCESDIRECTORY -Recurse | Where-Object { $_.Name -like "*version*.ps1" } | ForEach-Object { Write-Host "  - $($_.FullName)" }
+              Write-Host "[INFO] Looking for version scripts:"
+              Get-ChildItem -Path $env:BUILD_SOURCESDIRECTORY -Recurse -Filter "*version*.ps1" | ForEach-Object { 
+                  Write-Host "  - $($_.FullName)" 
+              }
               exit 1
           }
           
           Write-Host "`n[RUNNING] smart version bump..."
           Write-Host "[INFO] Script path: $scriptPath"
-          Write-Host "[INFO] Branch: $sourceBranch"
-          Write-Host "[INFO] Commit type detected: $commitType"
           
-          # Pass the detected type if we found one
+          # Dry run eerst
           if ($commitType) {
               $result = & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessageFirstLine -Type $commitType -DryRun
           }
@@ -206,7 +216,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
               Write-Host "`n[OK] Version analysis complete"
               
-              # Now run the actual bump
+              # Actual bump
               Write-Host "`n[APPLYING] version bump..."
               if ($commitType) {
                   & $scriptPath -BranchName $sourceBranch -CommitMessage $commitMessageFirstLine -Type $commitType
@@ -217,20 +227,17 @@ jobs:
               
               if ($LASTEXITCODE -eq 0) {
                   # Commit version changes
-                  git config user.email "azure-pipeline@bluemonkeys.nl"
-                  git config user.name "Azure Pipeline"
                   git add version.json frontend/package.json backend/package.json
                   git commit -m "chore: bump version [skip ci]"
                   
-                  # Push changes back to repository
-                  Write-Host "[INFO] Pushing version changes back to repository..."
-                  # Configure git to use the pipeline token
+                  # Push changes
+                  Write-Host "[INFO] Pushing version changes..."
                   $repoUrl = "https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application"
                   git remote set-url origin $repoUrl
                   git push origin HEAD:main
                   
                   if ($LASTEXITCODE -eq 0) {
-                      Write-Host "[SUCCESS] Version updated and pushed successfully!"
+                      Write-Host "[SUCCESS] Version updated and pushed!"
                   }
                   else {
                       Write-Host "[ERROR] Failed to push version changes!"
@@ -242,54 +249,59 @@ jobs:
               Write-Host "[WARNING] Version bump skipped or failed"
           }
     
-    # Rest van de pipeline blijft hetzelfde...
+    # Mirror to GitHub - met verbeterde error handling
     - task: PowerShell@2
       displayName: "📤 Mirror Monorepo to GitHub"
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           Write-Host "╔══════════════════════════════════════╗"
           Write-Host "║     Starting GitHub Mirror Process   ║"
           Write-Host "╚══════════════════════════════════════╝"
           
+          $tempDir = "temp-repo-$(Get-Random)"
+          
           try {
-              if (Test-Path "temp-repo") {
-                  Write-Host "⚠️ Removing existing temp-repo..."
-                  Remove-Item -Recurse -Force temp-repo
-              }
+              # Cleanup any existing temp directories
+              Get-ChildItem -Path . -Directory -Filter "temp-repo-*" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
               
               Write-Host "`n📥 Cloning repository..."
-              git clone --depth 1 --single-branch --branch main https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application temp-repo
+              git clone --depth 1 --single-branch --branch main `
+                  "https://$(System.AccessToken)@dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application" `
+                  $tempDir
               
               if (-not $?) {
                   throw "Clone failed!"
               }
               
-              cd temp-repo
+              Set-Location $tempDir
               
               git config user.email "azure-pipeline@bluemonkeys.nl"
               git config user.name "Azure Pipeline"
               
-              Write-Host "`n🔄 Fetching full history for GitHub compatibility..."
+              Write-Host "`n🔄 Fetching full history..."
               git fetch --unshallow origin
               
               Write-Host "`n📁 Repository Structure:"
-              Get-ChildItem | Format-Table Name, Mode, LastWriteTime
+              Get-ChildItem | Select-Object Name, Mode, LastWriteTime | Format-Table
               
+              # Backend check
               Write-Host "`n🔧 Backend Status:"
               if (Test-Path "backend/package.json") {
-                  $backendPkg = Get-Content backend/package.json | ConvertFrom-Json
+                  $backendPkg = Get-Content backend/package.json -Raw | ConvertFrom-Json
                   Write-Host "✅ Backend found: $($backendPkg.name) v$($backendPkg.version)"
               }
               
+              # Frontend check
               Write-Host "`n🎨 Frontend Status:"
               if (Test-Path "frontend/package.json") {
-                  $frontendPkg = Get-Content frontend/package.json | ConvertFrom-Json
+                  $frontendPkg = Get-Content frontend/package.json -Raw | ConvertFrom-Json
                   Write-Host "✅ Frontend found: $($frontendPkg.name) v$($frontendPkg.version)"
               }
               
               Write-Host "`n🔗 Adding GitHub remote..."
-              git remote add github https://$(GITHUB_TOKEN)@github.com/BlueMonkey003/ai-training.git
+              git remote add github "https://$(GITHUB_TOKEN)@github.com/BlueMonkey003/ai-training.git"
               
               Write-Host "`n📤 Pushing to GitHub..."
               git push github HEAD:main --force
@@ -305,31 +317,37 @@ jobs:
               exit 1
           } finally {
               Write-Host "`n🧹 Performing cleanup..."
-              cd $(Agent.WorkFolder)
+              Set-Location $env:BUILD_SOURCESDIRECTORY
               
-              if (Test-Path "temp-repo") {
-                  Remove-Item -Recurse -Force temp-repo -ErrorAction SilentlyContinue
+              if (Test-Path $tempDir) {
+                  Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
               }
               
+              # Garbage collection voor Microsoft-hosted agents
+              [System.GC]::Collect()
+              [System.GC]::WaitForPendingFinalizers()
               [System.GC]::Collect()
           }
           
           Write-Host "`n✨ Mirror process completed!"
     
-    # Rest van de deployment steps blijven hetzelfde...
+    # Wait task
     - task: PowerShell@2
       displayName: "⏱️ Wait for GitHub"
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           Write-Host "⏳ Waiting 5 seconds for GitHub to process push..."
           Start-Sleep -Seconds 5
           Write-Host "✅ Continue with deployments..."
     
+    # Trigger deployments
     - task: PowerShell@2
       displayName: "🚀 Trigger Both Deployments Simultaneously"
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           Write-Host "╔════════════════════════════════════════════╗"
           Write-Host "║   Triggering Parallel Deployments          ║"
@@ -339,7 +357,8 @@ jobs:
           
           Write-Host "`n🔧 Triggering Backend Deploy..."
           try {
-              $backendResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk" -Method POST -UseBasicParsing
+              $backendResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2rejiuuk2gs73883gog?key=81rOk6VLwAk" `
+                  -Method POST -UseBasicParsing
               Write-Host "✅ Backend deploy triggered! Status: $($backendResponse.StatusCode)"
           } catch {
               Write-Host "❌ Backend deploy trigger failed: $_"
@@ -348,7 +367,8 @@ jobs:
           
           Write-Host "`n🎨 Triggering Frontend Deploy..."
           try {
-              $frontendResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs" -Method POST -UseBasicParsing
+              $frontendResponse = Invoke-WebRequest -Uri "https://api.render.com/deploy/srv-d2reover433s73fiir2g?key=egSfMvGp7xs" `
+                  -Method POST -UseBasicParsing
               Write-Host "✅ Frontend deploy triggered! Status: $($frontendResponse.StatusCode)"
           } catch {
               Write-Host "❌ Frontend deploy trigger failed: $_"
@@ -364,11 +384,12 @@ jobs:
           Write-Host "⏳ Waiting 15 seconds before starting status monitoring..."
           Start-Sleep -Seconds 15
     
-    # STAP 2: Monitor BEIDE deployments parallel
+    # Monitor deployments
     - task: PowerShell@2
       displayName: "📊 Monitor Parallel Deployments"
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           Write-Host "════════════════════════════════════════════════"
           Write-Host "    Monitoring Parallel Deployments"
@@ -403,7 +424,7 @@ jobs:
           Write-Host "🔄 Check interval: $checkInterval seconds"
           Write-Host "📊 Max attempts: $maxAttempts"
           
-          # Monitor both deployments
+          # Monitor loop
           while ($attempt -lt $maxAttempts) {
               $attempt++
               
@@ -425,13 +446,11 @@ jobs:
                           $statusResponse = Invoke-RestMethod -Uri $statusUrl -Headers $headers -Method GET
                           
                           if ($statusResponse) {
-                              # De API geeft een array terug met objecten die een 'deploy' property hebben
                               if ($statusResponse -is [Array] -and $statusResponse.Count -gt 0 -and $statusResponse[0].deploy) {
                                   $latestDeploy = $statusResponse[0].deploy
                                   $deployStatus = $latestDeploy.status
                                   $service.Status = $deployStatus
                                   
-                                  # Haal commit info op
                                   $commitMessage = if ($latestDeploy.commit.message) { 
                                       $latestDeploy.commit.message.Substring(0, [Math]::Min(50, $latestDeploy.commit.message.Length)) 
                                   } else { 
@@ -464,11 +483,7 @@ jobs:
                                           Write-Host "  ⏳ Status: $deployStatus"
                                       }
                                   }
-                              } else {
-                                  Write-Host "  ⚠️ Unexpected API response structure"
                               }
-                          } else {
-                              Write-Host "  ⚠️ Empty response from API"
                           }
                       } catch {
                           Write-Host "  ⚠️ Error checking status: $_"
@@ -478,7 +493,7 @@ jobs:
                   }
               }
               
-              # Check if all services are complete AFTER checking all services
+              # Check completion
               $allComplete = $true
               foreach ($service in $services) {
                   if (-not $service.Complete) {
@@ -493,12 +508,12 @@ jobs:
               }
               
               if ($attempt -lt $maxAttempts) {
-                  Write-Host "`n⏳ Waiting $checkInterval seconds before next check..."
+                  Write-Host "`n⏳ Waiting $checkInterval seconds..."
                   Start-Sleep -Seconds $checkInterval
               }
           }
           
-          # Final status check
+          # Final check
           $backendComplete = $services[0].Complete
           $frontendComplete = $services[1].Complete
           
@@ -511,11 +526,12 @@ jobs:
           
           Write-Host "`n✅ Both services successfully deployed!"
     
-    # STAP 3: Health checks voor beide services
+    # Health checks
     - task: PowerShell@2
       displayName: "🏥 Verify Health Status"
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           Write-Host "════════════════════════════════════════════════"
           Write-Host "    Final Health Verification"
@@ -523,10 +539,11 @@ jobs:
           
           $healthCheckFailed = $false
           
-          # Backend health check
+          # Backend health
           Write-Host "`n🔧 Backend Health Check..."
           try {
-              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" -Method GET -UseBasicParsing -TimeoutSec 30
+              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" `
+                  -Method GET -UseBasicParsing -TimeoutSec 30
               if ($response.StatusCode -eq 200) {
                   Write-Host "✅ Backend is healthy!"
                   Write-Host "Response: $($response.Content)"
@@ -536,10 +553,11 @@ jobs:
               $healthCheckFailed = $true
           }
           
-          # Frontend health check
+          # Frontend health
           Write-Host "`n🎨 Frontend Health Check..."
           try {
-              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" -Method GET -UseBasicParsing -TimeoutSec 30
+              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" `
+                  -Method GET -UseBasicParsing -TimeoutSec 30
               if ($response.StatusCode -eq 200) {
                   if ($response.Content -like "*<!DOCTYPE html>*" -and $response.Content -like "*<div id=`"root`">*") {
                       Write-Host "✅ Frontend React app is live!"
@@ -552,31 +570,35 @@ jobs:
               $healthCheckFailed = $true
           }
           
-          # Custom domain checks (optional)
-          Write-Host "`n🌐 Custom Domain Checks (optional)..."
+          # Custom domains
+          Write-Host "`n🌐 Custom Domain Checks..."
           
           try {
-              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" -Method GET -UseBasicParsing -TimeoutSec 10
-              Write-Host "✅ Custom frontend domain is accessible"
+              $response = Invoke-WebRequest -Uri "https://lunchmonkeys.bluemonkeysaapp.nl" `
+                  -Method GET -UseBasicParsing -TimeoutSec 10
+              Write-Host "✅ Custom frontend domain accessible"
           } catch {
-              Write-Host "⚠️ Custom frontend domain not ready (SSL may be pending)"
+              Write-Host "⚠️ Custom frontend domain not ready"
           }
           
           try {
-              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" -Method GET -UseBasicParsing -TimeoutSec 10
-              Write-Host "✅ Custom backend domain is accessible"
+              $response = Invoke-WebRequest -Uri "https://api.lunchmonkeys.bluemonkeysaapp.nl/api/health" `
+                  -Method GET -UseBasicParsing -TimeoutSec 10
+              Write-Host "✅ Custom backend domain accessible"
           } catch {
-              Write-Host "⚠️ Custom backend domain not ready (SSL may be pending)"
+              Write-Host "⚠️ Custom backend domain not ready"
           }
           
           if ($healthCheckFailed) {
-              Write-Host "`n⚠️ Some health checks failed, but deployments are complete"
+              Write-Host "`n⚠️ Some health checks failed"
           }
     
+    # Summary
     - task: PowerShell@2
       displayName: "✨ Deployment Summary"
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           Write-Host "╔════════════════════════════════════════════╗"
           Write-Host "║   ✅ LunchMonkeys Deployment Complete!    ║"
