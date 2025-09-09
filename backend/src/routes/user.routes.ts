@@ -5,7 +5,8 @@ import {
     getAllUsers,
     updateUserRole,
     toggleUserStatus,
-    resetUserPassword
+    resetUserPassword,
+    deleteUser
 } from '../controllers/user.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
@@ -216,5 +217,46 @@ router.patch('/:id/status', authenticate, toggleUserStatus);
  *         description: Geen admin rechten
  */
 router.post('/:id/reset-password', authenticate, resetUserPassword);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Verwijder gebruiker (Admin)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID van de te verwijderen gebruiker
+ *     responses:
+ *       200:
+ *         description: Gebruiker succesvol verwijderd
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Gebruiker succesvol verwijderd
+ *                 deletedUserId:
+ *                   type: string
+ *                   example: 507f1f77bcf86cd799439011
+ *       400:
+ *         description: Kan eigen account of laatste admin niet verwijderen
+ *       403:
+ *         description: Geen admin rechten
+ *       404:
+ *         description: Gebruiker niet gevonden
+ */
+router.delete('/:id', authenticate, deleteUser);
 
 export default router; 
