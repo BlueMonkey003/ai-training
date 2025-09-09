@@ -239,4 +239,57 @@ export const resetUserPassword = async (
     } catch (error) {
         next(error);
     }
+};
+
+export const deleteUser = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        // Check if user is admin
+        if (req.user!.role !== 'admin') {
+            const error = new Error('Geen rechten om gebruikers te verwijderen') as ApiError;
+            error.statusCode = 403;
+            throw error;
+        }
+
+        const { id } = req.params;
+
+        // Prevent admin from deleting their own account
+        if (String(req.user!._id) === id) {
+            const error = new Error('Je kunt je eigen account niet verwijderen') as ApiError;
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Check if user exists
+        const user = await User.findById(id);
+        if (!user) {
+            const error = new Error('Gebruiker niet gevonden') as ApiError;
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Check if we're trying to delete the last admin
+        if (user.role === 'admin') {
+            const adminCount = await User.countDocuments({ role: 'admin' });
+            if (adminCount <= 1) {
+                const error = new Error('Kan de laatste admin niet verwijderen') as ApiError;
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+
+        // Delete the user
+        await User.findByIdAndDelete(id);
+
+        res.json({
+            success: true,
+            message: 'Gebruiker succesvol verwijderd',
+            deletedUserId: id,
+        });
+    } catch (error) {
+        next(error);
+    }
 }; 
