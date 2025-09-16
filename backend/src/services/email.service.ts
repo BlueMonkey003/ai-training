@@ -4,12 +4,12 @@ import { IUser } from '../models/User.model';
 // Email configuratie
 const createTransporter = () => {
     // Voor development gebruik je meestal een test service zoals Mailtrap of Gmail
-    // Voor productie gebruik je een echte email service (SendGrid, AWS SES, etc.)
+    // Voor productie gebruik je een echte email service (SendGrid, AWS  SES, etc.)
 
     if (process.env.NODE_ENV === 'development') {
         // Development configuratie met Gmail
         // Zorg ervoor dat "Less secure app access" is ingeschakeld of gebruik een App Password
-        return nodemailer.createTransporter({
+        return nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: process.env.EMAIL_USER || 'your-email@gmail.com',
@@ -18,7 +18,7 @@ const createTransporter = () => {
         });
     } else {
         // Productie configuratie
-        return nodemailer.createTransporter({
+        return nodemailer.createTransport({
             host: process.env.EMAIL_HOST || 'smtp.gmail.com',
             port: parseInt(process.env.EMAIL_PORT || '587'),
             secure: process.env.EMAIL_SECURE === 'true', // true voor 465, false voor andere poorten
