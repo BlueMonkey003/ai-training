@@ -15,8 +15,8 @@ resources:
   repositories:
     - repository: robotTests
       type: git
-      name: AI-training/AI-training
-      ref: main
+      name: AI-training  # Alleen de repository naam zonder project prefix
+      ref: refs/heads/main
       
   pipelines:
     - pipeline: deployment
