@@ -10,11 +10,17 @@ trigger: none
 # Geen PR triggers
 pr: none
 
-# Automatische trigger na succesvolle deployment
+# Resources - andere repositories en pipelines
 resources:
+  repositories:
+    - repository: robotTests
+      type: git
+      name: AI-training/AI-training
+      ref: main
+      
   pipelines:
     - pipeline: deployment
-      source: 'Deploy pipeline'  # Naam van je deployment pipeline
+      source: 'Deploy pipeline'  # Exacte naam van je deployment pipeline in Azure DevOps
       trigger:
         branches:
           include:
@@ -57,11 +63,11 @@ jobs:
     timeoutInMinutes: 30
     
     steps:
-      # Checkout Robot Framework test repository
-      - checkout: self
+      # Checkout Robot Framework test repository (andere repo!)
+      - checkout: robotTests
+        displayName: '📚 Checkout Robot Framework Tests Repository'
         clean: true
         fetchDepth: 1
-        displayName: '📚 Checkout Robot Framework Tests'
         
       # Toon repo inhoud voor debugging
       - script: |
@@ -69,12 +75,24 @@ jobs:
           echo "    Repository Structure"
           echo "════════════════════════════════════════════════"
           echo "Current directory: $(pwd)"
+          echo "Working directory: $(System.DefaultWorkingDirectory)"
           echo ""
           echo "📁 Root directory contents:"
           ls -la
           echo ""
-          echo "📋 Requirements.txt preview:"
-          head -20 requirements.txt
+          
+          # Verify requirements.txt exists
+          if [ -f "requirements.txt" ]; then
+              echo "✅ Found requirements.txt in root"
+              echo "📋 Requirements.txt preview:"
+              head -20 requirements.txt
+          else
+              echo "❌ ERROR: requirements.txt not found in repository root!"
+              echo "Looking for requirements.txt in subdirectories..."
+              find . -name "requirements.txt" -type f
+              exit 1
+          fi
+          
           echo ""
           
           # Check test directory
@@ -93,13 +111,16 @@ jobs:
           versionSpec: '3.11'
           addToPath: true
           
-      # Cache pip packages voor snellere builds
+      # Cache pip packages voor snellere builds (skip als requirements.txt niet bestaat)
       - task: Cache@2
         displayName: '💾 Cache Python Dependencies'
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        continueOnError: true
         inputs:
-          key: 'pip | "$(Agent.OS)" | requirements.txt'
+          key: 'pip | "$(Agent.OS)" | $(System.DefaultWorkingDirectory)/requirements.txt'
           restoreKeys: |
             pip | "$(Agent.OS)"
+            pip
           path: $(Pipeline.Workspace)/.pip
           
       # Installeer Python dependencies
