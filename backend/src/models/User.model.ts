@@ -8,6 +8,8 @@ export interface IUser extends Document {
     role: 'employee' | 'admin';
     profileImageUrl?: string;
     isActive: boolean;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
     createdAt: Date;
     updatedAt: Date;
     comparePassword(candidatePassword: string): Promise<boolean>;
@@ -45,6 +47,14 @@ const userSchema = new Schema<IUser>(
             type: Boolean,
             default: true,
         },
+        resetPasswordToken: {
+            type: String,
+            default: null,
+        },
+        resetPasswordExpires: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
@@ -69,10 +79,12 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
     return bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
-// Verwijder wachtwoord uit JSON response
+// Verwijder gevoelige velden uit JSON response
 userSchema.methods.toJSON = function () {
     const obj = this.toObject();
     delete obj.passwordHash;
+    delete obj.resetPasswordToken;
+    delete obj.resetPasswordExpires;
     return obj;
 };
 
