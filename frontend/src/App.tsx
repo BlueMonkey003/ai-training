@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import RestaurantsPage from './pages/RestaurantsPage';
 import OrderDetailPage from './pages/OrderDetailPage';
@@ -39,6 +41,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
       <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/" /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password" element={user ? <Navigate to="/" /> : <ResetPasswordPage />} />
 
       <Route element={<Layout />}>
         <Route path="/" element={

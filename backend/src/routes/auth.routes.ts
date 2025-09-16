@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe } from '../controllers/auth.controller';
+import { register, login, getMe, forgotPassword, resetPassword } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -138,5 +138,90 @@ router.post('/login', login);
  *         description: Niet geauthenticeerd
  */
 router.get('/me', authenticate, getMe);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Vraag een nieuw wachtwoord aan via email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Het emailadres van het account
+ *     responses:
+ *       200:
+ *         description: Email verstuurd (als account bestaat)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Email kon niet worden verstuurd
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset wachtwoord met tijdelijk wachtwoord
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - tempPassword
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Het emailadres van het account
+ *               tempPassword:
+ *                 type: string
+ *                 description: Het tijdelijke wachtwoord uit de email
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: Het nieuwe wachtwoord
+ *     responses:
+ *       200:
+ *         description: Wachtwoord succesvol gewijzigd
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Ongeldig of verlopen token
+ */
+router.post('/reset-password', resetPassword);
 
 export default router; 
