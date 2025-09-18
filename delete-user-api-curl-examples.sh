@@ -85,3 +85,4 @@ echo "  -H 'Authorization: Bearer TOKEN'"
 echo -e "\n# Get active employees only:"
 echo "curl -X GET '${BASE_URL}/api/users?active=true&role=employee' \\"
 echo "  -H 'Authorization: Bearer TOKEN'"
+

@@ -52,6 +52,8 @@ const router = Router();
  *               email:
  *                 type: string
  *                 format: email
+ *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
+ *                 description: Moet eindigen op @bluemonkeysit.nl
  *               password:
  *                 type: string
  *                 minLength: 6
@@ -93,6 +95,8 @@ router.post('/register', register);
  *               email:
  *                 type: string
  *                 format: email
+ *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
+ *                 description: Moet eindigen op @bluemonkeysit.nl
  *               password:
  *                 type: string
  *     responses:
@@ -157,6 +161,8 @@ router.get('/me', authenticate, getMe);
  *               email:
  *                 type: string
  *                 format: email
+ *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
+ *                 description: Moet eindigen op @bluemonkeysit.nl
  *                 description: Het emailadres van het account
  *     responses:
  *       200:
@@ -195,6 +201,8 @@ router.post('/forgot-password', forgotPassword);
  *               email:
  *                 type: string
  *                 format: email
+ *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
+ *                 description: Moet eindigen op @bluemonkeysit.nl
  *                 description: Het emailadres van het account
  *               tempPassword:
  *                 type: string

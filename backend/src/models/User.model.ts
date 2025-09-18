@@ -29,6 +29,12 @@ const userSchema = new Schema<IUser>(
             lowercase: true,
             trim: true,
             match: [/^\S+@\S+\.\S+$/, 'Geef een geldig emailadres op'],
+            validate: {
+                validator: function (email: string) {
+                    return email.toLowerCase().endsWith('@bluemonkeysit.nl');
+                },
+                message: 'Alleen emailadressen met @bluemonkeysit.nl zijn toegestaan'
+            }
         },
         passwordHash: {
             type: String,

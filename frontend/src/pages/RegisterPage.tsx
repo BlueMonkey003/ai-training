@@ -13,11 +13,35 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [emailError, setEmailError] = useState('');
     const { register } = useAuth();
     const navigate = useNavigate();
 
+    const validateEmail = (email: string) => {
+        if (!email.toLowerCase().endsWith('@bluemonkeysit.nl')) {
+            setEmailError('Alleen emailadressen met @bluemonkeysit.nl zijn toegestaan');
+            return false;
+        }
+        setEmailError('');
+        return true;
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newEmail = e.target.value;
+        setEmail(newEmail);
+        if (newEmail) {
+            validateEmail(newEmail);
+        } else {
+            setEmailError('');
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!validateEmail(email)) {
+            return;
+        }
 
         if (password !== confirmPassword) {
             alert('Wachtwoorden komen niet overeen');
@@ -81,11 +105,18 @@ export default function RegisterPage() {
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="naam@voorbeeld.nl"
+                                    placeholder="naam@bluemonkeysit.nl"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={handleEmailChange}
                                     required
+                                    className={emailError ? 'border-red-500' : ''}
                                 />
+                                {emailError && (
+                                    <p className="text-sm text-red-600">{emailError}</p>
+                                )}
+                                <p className="text-xs text-gray-500">
+                                    Alleen @bluemonkeysit.nl emailadressen zijn toegestaan
+                                </p>
                             </div>
 
                             <div className="space-y-2">

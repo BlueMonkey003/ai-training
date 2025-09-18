@@ -138,3 +138,4 @@ Verify User Is Deleted
     ...    expected_status=404
 
     Should Be Equal As Strings    ${response.status_code}    404
+
