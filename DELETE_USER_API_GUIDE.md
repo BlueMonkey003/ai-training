@@ -15,6 +15,7 @@ De Delete User API endpoint stelt administrators in staat om gebruikers uit het 
   "password": "BlueMonkeys123!",
   "role": "admin",
   "_id": "68b9351dfa24056b05d7f4a8"
+  // Let op: alle gebruikers moeten een @bluemonkeysit.nl email hebben
 }
 ```
 
@@ -138,3 +139,4 @@ Zoek naar de DELETE `/api/users/{id}` endpoint onder de Users sectie.
 2. Gebruik de GET `/api/users` endpoint om gebruiker IDs te vinden
 3. Test ook de error scenarios (404, 403, 400)
 4. Verifieer na deletion dat de gebruiker werkelijk verwijderd is
+

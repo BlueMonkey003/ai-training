@@ -13,6 +13,13 @@ export const register = async (
     try {
         const { name, email, password } = req.body;
 
+        // Check of email eindigt op @bluemonkeysit.nl
+        if (!email.toLowerCase().endsWith('@bluemonkeysit.nl')) {
+            const error = new Error('Alleen emailadressen met @bluemonkeysit.nl zijn toegestaan') as ApiError;
+            error.statusCode = 400;
+            throw error;
+        }
+
         // Check of gebruiker al bestaat
         const existingUser = await User.findOne({ email });
         if (existingUser) {

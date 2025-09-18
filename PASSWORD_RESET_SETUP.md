@@ -1,5 +1,9 @@
 # Password Reset Setup Guide
 
+## ⚠️ Email Domein Restrictie
+
+**Belangrijk:** Alleen emailadressen met het domein `@bluemonkeysit.nl` kunnen zich registreren in de applicatie. Dit is een security maatregel om ervoor te zorgen dat alleen medewerkers van Blue Monkeys IT toegang hebben tot het systeem.
+
 ## 📧 Email Configuratie
 
 Voor de wachtwoord reset functionaliteit moet je een email service configureren. 

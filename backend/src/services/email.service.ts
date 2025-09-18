@@ -4,7 +4,7 @@ import { IUser } from '../models/User.model';
 // Email configuratie
 const createTransporter = () => {
     // Voor development gebruik je meestal een test service zoals Mailtrap of Gmail
-    // Voor productie gebruik je een echte email service (SendGrid, AWS  SES, etc.)
+    // Voor productie gebruik je een echte email service (SendGrid, AWS SES, etc.)
 
     if (process.env.NODE_ENV === 'development') {
         // Development configuratie met Gmail
@@ -60,8 +60,7 @@ export const sendPasswordResetEmail = async (user: IUser, tempPassword: string):
                 <p><strong>Belangrijk:</strong></p>
                 <ul>
                     <li>Dit wachtwoord is slechts 1 uur geldig</li>
-                    <li>Ga naar <a href="https://lunchmonkeys.bluemonkeysaapp.nl/reset-password">de reset pagina</a> om je nieuwe wachtwoord in te stellen</li>
-                    <li>Gebruik dit tijdelijke wachtwoord NIET op de normale login pagina</li>
+                    <li>Log in met dit wachtwoord en wijzig het direct naar een nieuw wachtwoord</li>
                     <li>Als je geen wachtwoord reset hebt aangevraagd, neem dan contact op met de administrator</li>
                 </ul>
                 <p style="margin-top: 30px;">Met vriendelijke groet,<br>Het LunchMonkeys Team</p>

@@ -40,7 +40,7 @@ const seedData = async () => {
     // Create admin user
     const admin = await User.create({
       name: 'Admin User',
-      email: 'admin@lunchmonkeys.nl',
+      email: 'admin@bluemonkeysit.nl',
       passwordHash: 'admin123', // wordt automatisch gehashed
       role: 'admin'
     });
@@ -49,14 +49,14 @@ const seedData = async () => {
     // Create employee users
     const employee1 = await User.create({
       name: 'Jan Jansen',
-      email: 'jan@lunchmonkeys.nl',
+      email: 'jan.jansen@bluemonkeysit.nl',
       passwordHash: 'test123',
       role: 'employee'
     });
 
     const employee2 = await User.create({
       name: 'Marie de Vries',
-      email: 'marie@lunchmonkeys.nl',
+      email: 'marie.devries@bluemonkeysit.nl',
       passwordHash: 'test123',
       role: 'employee'
     });
