@@ -181,10 +181,9 @@ function Commit-Changes {
         if ($?) {
             Write-Success "✅ Commit succesvol!"
             
-            $pushNow = Read-Host "`nDirect pushen en PR aanmaken? (j/n)"
+            $pushNow = Read-Host "`nDirect pushen? (j/n)"
             if ($pushNow -eq 'j') {
                 Push-Changes
-                Create-PullRequest
                 return
             }
         }
@@ -205,9 +204,12 @@ function Push-Changes {
     if ($LASTEXITCODE -eq 0) {
         Write-Success "✅ Push succesvol!"
         
-        # Bied PR flow standaard aan na succesvolle push
+        # Bied PR flow standaard aan na succesvolle push (eenmalig)
         $createPR = Read-Host "Wil je nu een Pull Request aanmaken? (j/n)"
-        if ($createPR -eq 'j') { Create-PullRequest; return }
+        if ($createPR -eq 'j') {
+            Create-PullRequest
+            return
+        }
     }
     else {
         Write-Error "❌ Push mislukt"
