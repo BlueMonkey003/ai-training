@@ -1,19 +1,19 @@
 {
-  "version": "1.7.3",
+  "version": "1.7.4",
   "lastUpdated": "2025-09-19",
-  "buildNumber": 14,
+  "buildNumber": 15,
   "recentCommits": [
     {
-      "date": "2025-09-19 11:08:29 +0000",
-      "message": "Merged PR 36: 🐛 fix: Laatstewijzigingen"
+      "date": "2025-09-19 11:31:15 +0000",
+      "message": "Merged PR 37: 🐛 fix: Laatstewijzigingen1"
     },
     {
-      "date": "2025-09-19 13:05:27 +0200",
-      "message": "fix: joe"
+      "date": "2025-09-19 13:29:58 +0200",
+      "message": "fix: d"
     },
     {
-      "date": "2025-09-19 10:29:03 +0000",
-      "message": "chore: bump version [skip ci]"
+      "date": "2025-09-19 13:13:31 +0200",
+      "message": "test"
     }
   ]
 }
