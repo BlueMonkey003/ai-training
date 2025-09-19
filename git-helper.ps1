@@ -180,8 +180,16 @@ function Commit-Changes {
         git commit -m "$prefix$message"
         if ($?) {
             Write-Success "✅ Commit succesvol!"
-            
-            $pushNow = Read-Host "`nDirect pushen? (j/n)"
+
+            # Eerst PR aanbieden (aanbevolen): dit vraagt bullets, schrijft version.json en pusht daarna
+            $createPRNow = Read-Host "`nNu een Pull Request aanmaken (aanbevolen)? (j/n)"
+            if ($createPRNow -eq 'j') {
+                Create-PullRequest
+                return
+            }
+
+            # Anders: alleen pushen (zonder PR)
+            $pushNow = Read-Host "Alleen pushen? (j/n)"
             if ($pushNow -eq 'j') {
                 Push-Changes
                 return
