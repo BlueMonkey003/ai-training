@@ -226,11 +226,10 @@ function Commit-Changes {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
-param(
-    [switch]$SkipDeploy
-)
-
 function Push-Changes {
+    param(
+        [switch]$SkipDeploy
+    )
     $currentBranch = git rev-parse --abbrev-ref HEAD
     Write-Host "`n📤 Push naar Remote" -ForegroundColor Yellow
     Write-Host "═══════════════════════════════════" -ForegroundColor DarkGray
@@ -243,35 +242,37 @@ function Push-Changes {
     }
 
     # Vraag of deze push onderdeel is van deployment (release notes + PR)
-    $deployFlow = Read-Host "Deze push gebruiken voor deployment (release notes + PR)? (j/n)"
-
-    if ($deployFlow -eq 'j') {
-        # Bulletpoints vragen → version.json bijwerken → commit → push → PR
-        Write-Host "`n📝 Vul de release notes in (bulletpoints). ENTER op lege regel om te stoppen." -ForegroundColor Yellow
-        $bullets = @()
-        while ($true) {
-            $line = Read-Host "-"
-            if ([string]::IsNullOrWhiteSpace($line)) { break }
-            $bullets += $line.Trim()
-        }
-        if ($bullets.Count -gt 0) {
-            try {
-                $versionFile = Join-Path $PSScriptRoot "..\version.json"
-                if (Test-Path $versionFile) {
-                    $versionData = Get-Content $versionFile -Raw | ConvertFrom-Json
-                    if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
-                        $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
-                    }
-                    $today = Get-Date -Format 'yyyy-MM-dd'
-                    $newItems = @()
-                    foreach ($b in $bullets) { $newItems += @{ date = $today; message = $b } }
-                    $versionData.recentCommits = @($newItems) + @($versionData.recentCommits)
-                    $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
-                    git add $versionFile | Out-Null
-                    git commit -m "chore: update release notes in version.json [skip ci]" | Out-Null
-                }
+    $deployFlow = 'n'
+    if (-not $SkipDeploy) {
+        $deployFlow = Read-Host "Deze push gebruiken voor deployment (release notes + PR)? (j/n)"
+        if ($deployFlow -eq 'j') {
+            # Bulletpoints vragen → version.json bijwerken → commit → push → PR
+            Write-Host "`n📝 Vul de release notes in (bulletpoints). ENTER op lege regel om te stoppen." -ForegroundColor Yellow
+            $bullets = @()
+            while ($true) {
+                $line = Read-Host "-"
+                if ([string]::IsNullOrWhiteSpace($line)) { break }
+                $bullets += $line.Trim()
             }
-            catch { Write-Warning "Kon version.json niet bijwerken: $_" }
+            if ($bullets.Count -gt 0) {
+                try {
+                    $versionFile = Join-Path $PSScriptRoot "version.json"
+                    if (Test-Path $versionFile) {
+                        $versionData = Get-Content $versionFile -Raw | ConvertFrom-Json
+                        if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
+                            $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
+                        }
+                        $today = Get-Date -Format 'yyyy-MM-dd'
+                        $newItems = @()
+                        foreach ($b in $bullets) { $newItems += @{ date = $today; message = $b } }
+                        $versionData.recentCommits = @($newItems) + @($versionData.recentCommits)
+                        $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
+                        git add $versionFile | Out-Null
+                        git commit -m "chore: update release notes in version.json [skip ci]" | Out-Null
+                    }
+                }
+                catch { Write-Warning "Kon version.json niet bijwerken: $_" }
+            }
         }
     }
 
@@ -280,7 +281,7 @@ function Push-Changes {
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "✅ Push succesvol!"
-        if ($deployFlow -eq 'j') {
+        if (-not $SkipDeploy -and $deployFlow -eq 'j') {
             Create-PullRequest
             return
         }
