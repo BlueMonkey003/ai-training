@@ -79,6 +79,8 @@ jobs:
     # Smart Version Bump - werkt op beide Windows en Linux
     - task: PowerShell@2
       displayName: "🔢 Smart Version Update"
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       inputs:
         targetType: inline
         pwsh: true  # Gebruik PowerShell Core voor cross-platform compatibility

@@ -191,6 +191,10 @@ try {
                     }
                 }
             }
+            # Zorg dat de property bestaat voordat we toewijzen
+            if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
+                $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
+            }
             $versionData.recentCommits = $recentArray
         }
         catch {
