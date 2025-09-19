@@ -5,6 +5,19 @@ export interface IRestaurant extends Document {
     imageUrl: string;
     websiteUrl: string;
     menuUrl?: string;
+    menu?: {
+        categories: Array<{
+            id: string;
+            name: string;
+            items: Array<{
+                id: string;
+                name: string;
+                description?: string;
+                price: number;
+            }>;
+        }>;
+        currency?: string;
+    };
     createdBy: mongoose.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
@@ -30,6 +43,23 @@ const restaurantSchema = new Schema<IRestaurant>(
             type: String,
             match: [/^https?:\/\/.+/, 'Geef een geldige URL op'],
             default: null,
+        },
+        menu: {
+            categories: [
+                {
+                    id: { type: String, required: true, trim: true },
+                    name: { type: String, required: true, trim: true },
+                    items: [
+                        {
+                            id: { type: String, required: true, trim: true },
+                            name: { type: String, required: true, trim: true },
+                            description: { type: String, default: null },
+                            price: { type: Number, required: true, min: 0 },
+                        },
+                    ],
+                },
+            ],
+            currency: { type: String, default: 'EUR' },
         },
         createdBy: {
             type: Schema.Types.ObjectId,

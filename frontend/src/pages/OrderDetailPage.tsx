@@ -10,6 +10,8 @@ import { useAuth } from '../contexts/AuthContext';
 import socketService from '../services/socket';
 import toast from 'react-hot-toast';
 import { ShoppingCart, Edit2, Trash2, X, Clock } from 'lucide-react';
+import { restaurantApi } from '../services/api';
+import type { RestaurantMenu, RestaurantMenuCategory, RestaurantMenuItem } from '../../../shared/types';
 
 export default function OrderDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ export default function OrderDetailPage() {
     const [order, setOrder] = useState<Order | null>(null);
     const [items, setItems] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [menu, setMenu] = useState<RestaurantMenu | null>(null);
 
     // Form state
     const [showForm, setShowForm] = useState(false);
@@ -70,6 +73,9 @@ export default function OrderDetailPage() {
             const response = await orderApi.getById(id);
             setOrder(response.order);
             setItems(response.items);
+            const rest = response.order.restaurantId as Restaurant;
+            const menuRes = await restaurantApi.getMenu(rest._id);
+            setMenu(menuRes.menu);
         } catch (error) {
             toast.error('Fout bij ophalen order details');
             navigate('/');
@@ -83,11 +89,17 @@ export default function OrderDetailPage() {
         if (!id) return;
 
         try {
-            const data = {
+            const data: any = {
                 itemName: formData.itemName,
                 notes: formData.notes || undefined,
-                price: formData.price ? parseFloat(formData.price) : undefined,
             };
+            if (formData.price) data.price = parseFloat(formData.price);
+            if (menu && formData.itemName && formData.itemName.includes('::')) {
+                const [catId, itemId] = formData.itemName.split('::');
+                data.menuItemId = itemId;
+                delete data.price;
+                delete data.itemName;
+            }
 
             if (editingItemId) {
                 await orderApi.updateItem(id, editingItemId, data);
@@ -141,8 +153,8 @@ export default function OrderDetailPage() {
         setShowForm(false);
     };
 
-    const getUserItem = () => {
-        return items.find(item => (item.userId as User)._id === user?._id);
+    const getUserItems = () => {
+        return items.filter(item => (item.userId as User)._id === user?._id);
     };
 
     const totalPrice = items.reduce((sum, item) => sum + (item.price || 0), 0);
@@ -156,8 +168,8 @@ export default function OrderDetailPage() {
     }
 
     const restaurant = order.restaurantId as Restaurant;
-    const userItem = getUserItem();
-    const canAddItem = order.status === 'open' && !userItem && !showForm;
+    const userItems = getUserItems();
+    const canAddItem = order.status === 'open' && !showForm;
 
     return (
         <div className="space-y-6">
@@ -229,16 +241,39 @@ export default function OrderDetailPage() {
                     {showForm ? (
                         <form onSubmit={handleSubmit}>
                             <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="itemName">Wat wil je bestellen?</Label>
-                                    <Input
-                                        id="itemName"
-                                        value={formData.itemName}
-                                        onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
-                                        placeholder="Bijv. Broodje gezond"
-                                        required
-                                    />
-                                </div>
+                                {menu && menu.categories?.length ? (
+                                    <div className="space-y-2">
+                                        <Label>Menukeuze</Label>
+                                        <select
+                                            className="w-full border rounded p-2"
+                                            value={formData.itemName}
+                                            onChange={(e) => setFormData({ ...formData, itemName: e.target.value, price: '' })}
+                                            required
+                                        >
+                                            <option value="" disabled>Kies een item</option>
+                                            {menu.categories.map((cat: RestaurantMenuCategory) => (
+                                                <optgroup key={cat.id} label={cat.name}>
+                                                    {cat.items.map((mi: RestaurantMenuItem) => (
+                                                        <option key={mi.id} value={`${cat.id}::${mi.id}`}>
+                                                            {mi.name} — €{mi.price.toFixed(2)}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="itemName">Wat wil je bestellen?</Label>
+                                        <Input
+                                            id="itemName"
+                                            value={formData.itemName}
+                                            onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
+                                            placeholder="Bijv. Broodje gezond"
+                                            required
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <Label htmlFor="notes">Opmerkingen (optioneel)</Label>
@@ -250,17 +285,19 @@ export default function OrderDetailPage() {
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="price">Prijs (optioneel)</Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                        placeholder="0.00"
-                                    />
-                                </div>
+                                {!menu && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="price">Prijs (optioneel)</Label>
+                                        <Input
+                                            id="price"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.price}
+                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="flex space-x-2">
                                     <Button type="submit">
@@ -277,7 +314,7 @@ export default function OrderDetailPage() {
                         <CardContent>
                             <Button onClick={() => setShowForm(true)} className="w-full">
                                 <ShoppingCart className="h-4 w-4 mr-2" />
-                                Voeg je bestelling toe
+                                Voeg een bestelling toe
                             </Button>
                         </CardContent>
                     )}

@@ -4,8 +4,16 @@
   "buildNumber": 13,
   "recentCommits": [
     {
-      "message": "Mobiele weergave voor wijzigingen optimaler gemaakt",
-      "date": "2025-09-19"
+      "date": "2025-09-19",
+      "message": "Bestellen via dropdown met automatische prijzen wanneer menu aanwezig is"
+    },
+    {
+      "date": "2025-09-19",
+      "message": "Meerdere items per gebruiker per order toegestaan"
+    },
+    {
+      "date": "2025-09-19",
+      "message": "Menukaart import (XML/JSON) toegevoegd; embedded menu per restaurant"
     }
   ]
 }

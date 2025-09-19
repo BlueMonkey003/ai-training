@@ -1,69 +1,40 @@
-# React + TypeScript + Vite
+# LunchMonkeys Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite + TypeScript frontend voor de LunchMonkeys applicatie.
 
-Currently, two official plugins are available:
+## Features
+- Tailwind CSS UI, responsive layout (mobiel en laptop).
+- Auth flows (login/registratie met `@bluemonkeysit.nl`), protected routes.
+- Realtime notificaties via Socket.IO.
+- Settings/Over-pagina toont versie/build en laatste 3 wijzigingen.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Ontwikkelen
+1. Dependencies installeren:
+   ```bash
+   npm install
+   ```
+2. `.env.development` toevoegen:
+   ```env
+   VITE_API_URL=http://localhost:10000
+   ```
+3. Starten:
+   ```bash
+   npm run dev
+   ```
+4. Open `http://localhost:5173` (Vite kiest automatisch 5174 als 5173 bezet is).
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Build
+```bash
+npm run build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Structuur (kort)
+- `src/pages`: `LoginPage`, `DashboardPage`, `RestaurantsPage`, `NotificationsPage`, `OrderDetailPage`, `SettingsPage`, etc.
+- `src/components/ui`: basis UI-componenten.
+- `src/services/api.ts`: axios-instantie met auth-interceptor.
+- `src/services/socket.ts`: Socket.IO client.
+- `src/contexts/AuthContext.tsx`: auth state en role-based helpers.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Release notes
+De app leest `lunchmonkeys/version.json` en toont de laatste 3 bullets van `recentCommits` (nieuwste eerst). Tekst wordt niet afgekapt en blijft leesbaar op mobiel.

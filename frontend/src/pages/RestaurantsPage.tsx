@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Plus, Edit, Trash2, ExternalLink, X } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function RestaurantsPage() {
@@ -21,6 +21,8 @@ export default function RestaurantsPage() {
         menuUrl: '',
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [menuFile, setMenuFile] = useState<File | null>(null);
+    const [menuJson, setMenuJson] = useState<string>('');
 
     useEffect(() => {
         fetchRestaurants();
@@ -64,6 +66,24 @@ export default function RestaurantsPage() {
                 toast.success('Restaurant toegevoegd');
             }
 
+            // Optioneel: menu importeren (replace) na create/update
+            const targetId = editingId || (await restaurantApi.getAll()).restaurants.find(r => r.name === formData.name)?.
+                _id;
+            if (targetId) {
+                if (menuFile) {
+                    await restaurantApi.importMenu(targetId, menuFile);
+                    toast.success('Menu geïmporteerd');
+                } else if (menuJson.trim()) {
+                    try {
+                        const parsed = JSON.parse(menuJson);
+                        await restaurantApi.importMenu(targetId, parsed);
+                        toast.success('Menu geïmporteerd');
+                    } catch {
+                        toast.error('JSON is ongeldig');
+                    }
+                }
+            }
+
             setShowForm(false);
             resetForm();
             fetchRestaurants();
@@ -103,6 +123,8 @@ export default function RestaurantsPage() {
             menuUrl: '',
         });
         setImageFile(null);
+        setMenuFile(null);
+        setMenuJson('');
         setEditingId(null);
     };
 
@@ -179,6 +201,23 @@ export default function RestaurantsPage() {
                                     accept="image/*"
                                     onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                                     required={!editingId}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Menukaart importeren (XML of JSON)</Label>
+                                <Input
+                                    type="file"
+                                    accept=".xml,application/json"
+                                    onChange={(e) => setMenuFile(e.target.files?.[0] || null)}
+                                />
+                                <div className="text-sm text-gray-500">of plak JSON hieronder</div>
+                                <textarea
+                                    className="w-full border rounded p-2 text-sm"
+                                    rows={6}
+                                    placeholder='{"categories": [...]}'
+                                    value={menuJson}
+                                    onChange={(e) => setMenuJson(e.target.value)}
                                 />
                             </div>
 
