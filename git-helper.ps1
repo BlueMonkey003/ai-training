@@ -20,7 +20,8 @@ function Show-Menu {
         Write-Host "📍 Branch: " -NoNewline -ForegroundColor Gray
         if ($currentBranch -eq "main") {
             Write-Host "$currentBranch" -ForegroundColor Red
-        } else {
+        }
+        else {
             Write-Host "$currentBranch" -ForegroundColor Green
         }
         
@@ -180,9 +181,10 @@ function Commit-Changes {
         if ($?) {
             Write-Success "✅ Commit succesvol!"
             
-            $pushNow = Read-Host "`nDirect pushen? (j/n)"
+            $pushNow = Read-Host "`nDirect pushen en PR aanmaken? (j/n)"
             if ($pushNow -eq 'j') {
                 Push-Changes
+                Create-PullRequest
                 return
             }
         }
@@ -203,16 +205,11 @@ function Push-Changes {
     if ($LASTEXITCODE -eq 0) {
         Write-Success "✅ Push succesvol!"
         
-        # Check of het een nieuwe branch is
-        if ($pushOutput -match "new branch") {
-            Write-Host "`n🎉 Nieuwe branch gepusht!" -ForegroundColor Green
-            $createPR = Read-Host "Wil je direct een Pull Request aanmaken? (j/n)"
-            if ($createPR -eq 'j') {
-                Create-PullRequest
-                return
-            }
-        }
-    } else {
+        # Bied PR flow standaard aan na succesvolle push
+        $createPR = Read-Host "Wil je nu een Pull Request aanmaken? (j/n)"
+        if ($createPR -eq 'j') { Create-PullRequest; return }
+    }
+    else {
         Write-Error "❌ Push mislukt"
     }
     
@@ -231,7 +228,8 @@ function Pull-Changes {
     
     if ($?) {
         Write-Success "✅ Pull succesvol!"
-    } else {
+    }
+    else {
         Write-Error "❌ Pull mislukt - mogelijk merge conflicts"
     }
     
@@ -309,7 +307,8 @@ function Sync-WithMain {
     if ($currentBranch -eq "main") {
         Write-Warning "Je bent al op main branch!"
         git pull origin main
-    } else {
+    }
+    else {
         # Stash changes if needed
         $hasChanges = git status --porcelain
         if ($hasChanges) {
@@ -330,13 +329,15 @@ function Sync-WithMain {
         
         if ($choice -eq '2') {
             git rebase origin/main
-        } else {
+        }
+        else {
             git merge origin/main
         }
         
         if ($?) {
             Write-Success "✅ Sync succesvol!"
-        } else {
+        }
+        else {
             Write-Error "❌ Conflicts gevonden - los deze op en commit"
         }
         
@@ -362,7 +363,8 @@ function Delete-Branch {
     if ($branchName) {
         if ($branchName -eq "main") {
             Write-Error "❌ Kan main branch niet verwijderen!"
-        } else {
+        }
+        else {
             $deleteRemote = Read-Host "Ook van remote verwijderen? (j/n)"
             
             # Delete local
@@ -468,10 +470,10 @@ function Create-PullRequest {
     $encodedDescription = [System.Web.HttpUtility]::UrlEncode($prDescription)
     
     $prUrl = "https://dev.azure.com/bluemonkeys123/AI-training/_git/AI-training-application/pullrequestcreate" +
-             "?sourceRef=$currentBranch" +
-             "&targetRef=main" +
-             "&title=$encodedTitle" +
-             "&description=$encodedDescription"
+    "?sourceRef=$currentBranch" +
+    "&targetRef=main" +
+    "&title=$encodedTitle" +
+    "&description=$encodedDescription"
     
     Write-Host "`n📋 Opening browser voor PR creation..." -ForegroundColor Green
     Write-Info "Titel en beschrijving zijn vooringevuld"
@@ -519,14 +521,16 @@ function Stash-Changes {
     $changes = git status --porcelain
     if (-not $changes) {
         Write-Warning "Geen wijzigingen om te stashen"
-    } else {
+    }
+    else {
         Write-Host "Te stashen wijzigingen:" -ForegroundColor Cyan
         git status --short
         
         $message = Read-Host "`nStash beschrijving (optioneel)"
         if ($message) {
             git stash push -m "$message"
-        } else {
+        }
+        else {
             git stash push
         }
         
@@ -549,7 +553,8 @@ function Apply-Stash {
     $stashList = git stash list
     if (-not $stashList) {
         Write-Warning "Geen stashes beschikbaar"
-    } else {
+    }
+    else {
         Write-Host "Beschikbare stashes:" -ForegroundColor Cyan
         git stash list | ForEach-Object {
             Write-Host "  $_"
@@ -565,13 +570,15 @@ function Apply-Stash {
         if ($stashIndex -ne '') {
             if ($action -eq '2') {
                 git stash pop "stash@{$stashIndex}"
-            } else {
+            }
+            else {
                 git stash apply "stash@{$stashIndex}"
             }
             
             if ($?) {
                 Write-Success "✅ Stash toegepast!"
-            } else {
+            }
+            else {
                 Write-Error "❌ Mogelijk conflicts - check git status"
             }
         }
@@ -671,7 +678,8 @@ function Quick-Deploy {
         
         Write-Info "3️⃣ Creating PR..."
         Create-PullRequest
-    } else {
+    }
+    else {
         Write-Error "❌ Push failed - check git status"
         Write-Host "`nDruk op een toets om door te gaan..."
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
