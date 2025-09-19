@@ -70,7 +70,8 @@ export const healthCheck = async (req: Request, res: Response) => {
             const packageJson = require('../../package.json');
             versionInfo = {
                 version: packageJson.version || '1.0.0',
-                buildNumber: 0
+                buildNumber: 0,
+                recentCommits: []
             };
         }
 
@@ -83,6 +84,7 @@ export const healthCheck = async (req: Request, res: Response) => {
             service: 'lunchmonkeys-backend',
             version: versionInfo.version,
             buildNumber: versionInfo.buildNumber,
+            recentCommits: versionInfo.recentCommits || [],
             environment: process.env.NODE_ENV || 'development',
             database: {
                 status: dbStatus,

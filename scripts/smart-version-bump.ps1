@@ -151,8 +151,26 @@ try {
         $versionData.lastUpdated = $date
         $versionData.buildNumber = $buildNumber
         
+        # recent commits (laatste 3) zonder auteur, met datum en message
+        try {
+            $recent = git log -3 --pretty=format:'%ad||%s' --date=iso
+            $recentArray = @()
+            foreach ($line in $recent) {
+                if (-not [string]::IsNullOrWhiteSpace($line)) {
+                    $parts = $line -split '\|\|', 2
+                    if ($parts.Length -eq 2) {
+                        $recentArray += @{ date = $parts[0]; message = $parts[1] }
+                    }
+                }
+            }
+            $versionData.recentCommits = $recentArray
+        }
+        catch {
+            Write-Host "[WARN] Could not read recent commits: $_"
+        }
+        
         # Write back to file
-        $versionData | ConvertTo-Json | Set-Content $versionFile
+        $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
         Write-Host "[OK] Version file updated" -ForegroundColor Green
         
         # Update package.json files

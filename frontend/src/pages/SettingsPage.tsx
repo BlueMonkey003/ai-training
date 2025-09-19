@@ -9,6 +9,7 @@ export default function SettingsPage() {
     const { isAdmin } = useAuth();
     const [version, setVersion] = useState('1.0.0');
     const [buildNumber, setBuildNumber] = useState(0);
+    const [recentCommits, setRecentCommits] = useState<{ message: string; date: string }[]>([]);
 
     useEffect(() => {
         // Fetch version from health endpoint
@@ -19,6 +20,9 @@ export default function SettingsPage() {
                 }
                 if (response.data.buildNumber) {
                     setBuildNumber(response.data.buildNumber);
+                }
+                if (Array.isArray(response.data.recentCommits)) {
+                    setRecentCommits(response.data.recentCommits.slice(0, 3));
                 }
             })
             .catch(() => {
@@ -122,6 +126,25 @@ export default function SettingsPage() {
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Je rol</span>
                                 <span className="font-medium">{isAdmin ? 'Administrator' : 'Medewerker'}</span>
+                            </div>
+
+                            {/* Laatste wijzigingen */}
+                            <div className="pt-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-gray-600">Laatste wijzigingen</span>
+                                </div>
+                                {recentCommits.length > 0 ? (
+                                    <ul className="mt-2 space-y-1">
+                                        {recentCommits.map((c, idx) => (
+                                            <li key={idx} className="flex justify-between gap-4">
+                                                <span className="text-gray-700 truncate">{c.message}</span>
+                                                <span className="text-gray-500 whitespace-nowrap">{new Date(c.date).toLocaleDateString('nl-NL')}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="mt-2 text-gray-500">Nog geen wijzigingen beschikbaar</p>
+                                )}
                             </div>
                         </div>
                     </CardContent>
