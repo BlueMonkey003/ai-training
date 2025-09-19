@@ -4,6 +4,14 @@
   "buildNumber": 11,
   "recentCommits": [
     {
+      "message": "Versienummer zichtbaar in de header",
+      "date": "2025-09-19"
+    },
+    {
+      "message": "Laatste wijzigingen inzichtelijk op de instellingen pagina",
+      "date": "2025-09-19"
+    },
+    {
       "message": "Versienummer zichtbaar in de header1",
       "date": "2025-09-19"
     },

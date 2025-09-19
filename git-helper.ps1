@@ -215,8 +215,8 @@ function Commit-Changes {
             Write-Success "✅ Commit succesvol!"
 
             if ($wantReleaseNotes -eq 'j') {
-                # Push en PR aanmaken
-                Push-Changes
+                # Push (zonder extra vragen) en PR aanmaken
+                Push-Changes -SkipDeploy
                 Create-PullRequest
                 return
             }
@@ -225,6 +225,10 @@ function Commit-Changes {
     Write-Host "`nDruk op een toets om door te gaan..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
+
+param(
+    [switch]$SkipDeploy
+)
 
 function Push-Changes {
     $currentBranch = git rev-parse --abbrev-ref HEAD
