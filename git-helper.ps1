@@ -200,7 +200,13 @@ function Commit-Changes {
                         $today = Get-Date -Format 'yyyy-MM-dd'
                         $newItems = @()
                         foreach ($b in $bullets) { $newItems += @{ date = $today; message = $b } }
-                        $versionData.recentCommits = @($newItems) + @($versionData.recentCommits)
+                        $existing = @()
+                        if ($versionData.recentCommits) {
+                            $existing = @($versionData.recentCommits | Where-Object { $_.message -and $_.date -ne $today })
+                        }
+                        $merged = @($newItems + $existing)
+                        if ($merged.Count -gt 5) { $merged = $merged[0..4] }
+                        $versionData.recentCommits = $merged
                         $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
                         git add $versionFile | Out-Null
                         Write-Success "Release notes toegevoegd en gestaged"

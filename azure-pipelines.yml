@@ -88,7 +88,7 @@ jobs:
           Write-Host "           SMART VERSION UPDATE"
           Write-Host "════════════════════════════════════════════════"
           
-          # Ensure full git history (needed for recent commits)
+          # Ensure full git history (keep for version bump only)
           try {
             $isShallow = (git rev-parse --is-shallow-repository) 2>$null
             $token = $env:SYSTEM_ACCESSTOKEN
@@ -110,7 +110,7 @@ jobs:
             Write-Host "[WARN] Could not fetch full history: $_"
           }
 
-          # Get commit info
+          # Get commit info (for version bump only; not used for release notes)
           $commitMessage = git log -1 --pretty=%B
           $commitMessageFirstLine = ($commitMessage -split "`n")[0].Trim()
           
