@@ -55,6 +55,21 @@ function Get-ChangeTypeFromCommit {
 
 # Main logic
 try {
+    # Ensure full git history is available for recent commits
+    try {
+        $isShallow = (git rev-parse --is-shallow-repository) 2>$null
+        if ($isShallow -and $isShallow.Trim().ToLower() -eq 'true') {
+            Write-Host "[INFO] Repository is shallow. Fetching full history..."
+            git fetch --unshallow origin
+        }
+        else {
+            git fetch --all --tags --prune
+        }
+    }
+    catch {
+        Write-Host "[WARN] Could not verify/fetch git history: $_"
+    }
+
     # Read current version
     if (-not (Test-Path $versionFile)) {
         Write-Host "X Version file not found at: $versionFile" -ForegroundColor Red
