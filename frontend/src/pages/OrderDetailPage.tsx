@@ -153,9 +153,6 @@ export default function OrderDetailPage() {
         setShowForm(false);
     };
 
-    const getUserItems = () => {
-        return items.filter(item => (item.userId as User)._id === user?._id);
-    };
 
     const totalPrice = items.reduce((sum, item) => sum + (item.price || 0), 0);
 
