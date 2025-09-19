@@ -10,7 +10,6 @@ trigger:
     exclude:
       - '**/package.json'
       - '**/package-lock.json'
-      - version.json
       - '**/*.md'
 
 # Microsoft-hosted agent pool
