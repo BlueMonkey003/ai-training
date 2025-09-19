@@ -179,19 +179,29 @@ try {
         $versionData.lastUpdated = $date
         $versionData.buildNumber = $buildNumber
         
-        # recent commits (laatste 3) zonder auteur, met datum en message
+        # recent commits (laatste 3) met voorkeur voor release notes blok uit PR merge commit
         try {
-            $recent = git log -3 --pretty=format:'%ad||%s' --date=iso
             $recentArray = @()
-            foreach ($line in $recent) {
-                if (-not [string]::IsNullOrWhiteSpace($line)) {
-                    $parts = $line -split '\|\|', 2
-                    if ($parts.Length -eq 2) {
-                        $recentArray += @{ date = $parts[0]; message = $parts[1] }
+            $prBody = git log -1 --pretty=%b
+            if ($prBody -and ($prBody -match '<!-- RELEASE_NOTES_START -->[\s\S]*?<!-- RELEASE_NOTES_END -->')) {
+                $block = [regex]::Match($prBody, '<!-- RELEASE_NOTES_START -->([\s\S]*?)<!-- RELEASE_NOTES_END -->').Groups[1].Value
+                $lines = $block -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                foreach ($l in $lines) {
+                    $msg = $l -replace '^-\s*', ''
+                    $recentArray += @{ date = (Get-Date).ToString('yyyy-MM-dd'); message = $msg }
+                }
+            }
+            if ($recentArray.Count -eq 0) {
+                $recent = git log -3 --pretty=format:'%ad||%s' --date=iso
+                foreach ($line in $recent) {
+                    if (-not [string]::IsNullOrWhiteSpace($line)) {
+                        $parts = $line -split '\|\|', 2
+                        if ($parts.Length -eq 2) {
+                            $recentArray += @{ date = $parts[0]; message = $parts[1] }
+                        }
                     }
                 }
             }
-            # Zorg dat de property bestaat voordat we toewijzen
             if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
                 $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
             }

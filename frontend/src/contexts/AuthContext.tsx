@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
     }, []);
 
-    // Effect voor notification listener
+    // Effect voor notification  listener
     useEffect(() => {
         if (user) {
             const handleNewNotification = (notification: Notification) => {
