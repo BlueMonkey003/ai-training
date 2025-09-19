@@ -77,6 +77,10 @@ export const restaurantApi = {
         const response = await api.get<{ success: boolean; restaurants: Restaurant[] }>('/restaurants');
         return response.data;
     },
+    getMenu: async (id: string) => {
+        const response = await api.get<{ success: boolean; menu: any }>(`/restaurants/${id}/menu`);
+        return response.data;
+    },
 
     create: async (data: FormData) => {
         const response = await api.post<{ success: boolean; restaurant: Restaurant }>('/restaurants', data, {
@@ -90,6 +94,20 @@ export const restaurantApi = {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data;
+    },
+
+    importMenu: async (id: string, payload: File | object) => {
+        if (payload instanceof File) {
+            const fd = new FormData();
+            fd.append('file', payload);
+            const response = await api.post<{ success: boolean; menu: any }>(`/restaurants/${id}/menu/import`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return response.data;
+        } else {
+            const response = await api.post<{ success: boolean; menu: any }>(`/restaurants/${id}/menu/import`, payload);
+            return response.data;
+        }
     },
 
     delete: async (id: string) => {

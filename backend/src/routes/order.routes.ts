@@ -234,8 +234,124 @@ router.get('/:id', authenticate, getOrderById);
 router.patch('/:id', authenticate, requireAdmin, closeOrder);
 
 // Order items routes
+/**
+ * @swagger
+ * /api/orders/{id}/items:
+ *   post:
+ *     summary: Voeg een item toe aan een order (meerdere per gebruiker toegestaan)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - itemName
+ *             properties:
+ *               itemName:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               menuItemId:
+ *                 type: string
+ *                 description: Indien opgegeven wordt itemName/price uit het restaurantmenu gehaald
+ *     responses:
+ *       201:
+ *         description: Item toegevoegd
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 item:
+ *                   $ref: '#/components/schemas/OrderItem'
+ *       400:
+ *         description: Order gesloten of ongeldig
+ *       401:
+ *         description: Niet geauthenticeerd
+ */
 router.post('/:id/items', authenticate, addOrderItem);
+/**
+ * @swagger
+ * /api/orders/{id}/items/{itemId}:
+ *   patch:
+ *     summary: Werk een item bij (alleen eigenaar)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: itemId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               itemName:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Item bijgewerkt
+ *       401:
+ *         description: Niet geauthenticeerd
+ *       404:
+ *         description: Item niet gevonden of geen rechten
+ */
 router.patch('/:id/items/:itemId', authenticate, updateOrderItem);
+/**
+ * @swagger
+ * /api/orders/{id}/items/{itemId}:
+ *   delete:
+ *     summary: Verwijder een item (alleen eigenaar)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: itemId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Item verwijderd
+ *       401:
+ *         description: Niet geauthenticeerd
+ *       404:
+ *         description: Item niet gevonden of geen rechten
+ */
 router.delete('/:id/items/:itemId', authenticate, deleteOrderItem);
 
 export default router; 

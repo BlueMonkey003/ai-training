@@ -36,11 +36,11 @@ npm run seed:prod
 ```json
 {
   "name": "Admin Blue Monkeys",
-  "email": "admin@bluemonkeys.nl",
-  "passwordHash": "$2b$10$...", // Gebruik bcrypt om te hashen
+  "email": "admin@bluemonkeysit.nl",
+  "passwordHash": "$2b$10$...",
   "role": "admin",
-  "createdAt": new Date(),
-  "updatedAt": new Date()
+  "createdAt": { "$date": "<ISO-DATUM>" },
+  "updatedAt": { "$date": "<ISO-DATUM>" }
 }
 ```
 
@@ -55,7 +55,7 @@ Anders gebruikt het script: `Admin123!@#`
 
 ## 🔐 Na Deployment
 
-1. **Login als admin**: admin@bluemonkeys.nl
+1. **Login als admin**: admin@bluemonkeysit.nl
 2. **Verander direct het wachtwoord** via profiel pagina
 3. **Maak andere admin accounts** indien nodig
 4. **Verwijder of disable** het default admin account

@@ -1,6 +1,6 @@
-# 🔢 Versioning System
+# 🔢 Versioning & Release Notes
 
-Dit project gebruikt een intelligent automatisch versioning systeem dat de versie verhoogt op basis van het type wijziging.
+Dit project gebruikt pipeline-gestuurd versiebeheer en een expliciet release-notesbeleid. De versie wordt verhoogd op basis van het type wijziging en `version.json` is de bron voor versie/build en recente wijzigingen.
 
 ## 📋 Versie Formaat
 
@@ -102,15 +102,25 @@ Voor lokaal testen of handmatige bumps:
 
 ## 📊 Version File
 
-Het `version.json` bestand bevat:
+`lunchmonkeys/version.json` is de enige bron voor versie, build en release notes die in de app getoond worden.
+
+Schema:
 
 ```json
 {
-    "version": "1.2.3",
-    "lastUpdated": "2025-01-09",
-    "buildNumber": 45
+  "version": "1.7.1",
+  "lastUpdated": "2025-09-19",
+  "buildNumber": 13,
+  "recentCommits": [
+    { "date": "YYYY-MM-DD", "message": "..." }
+  ]
 }
 ```
+
+Regels:
+- `recentCommits` bevat maximaal 5 items; nieuwste bovenaan.
+- De frontend toont de laatste 3 bullets (nieuwste eerst) op de Over/Instellingen pagina.
+- Pipelines overschrijven `recentCommits` NIET; de bullets blijven leidend voor app en PR-tekst.
 
 ## 🔍 Versie Informatie
 
@@ -118,6 +128,21 @@ De huidige versie is zichtbaar op:
 - Settings page in de app
 - `/api/health` endpoint
 - `version.json` in de repository
+
+## 📝 Release Notes Flow
+
+Ontwikkelaars onderhouden de bullets in `version.json` en PR-beschrijvingen zijn hiermee in sync.
+
+- Optie 3 (commit) in `git-helper.ps1`:
+  - Vraagt of release notes + PR gewenst zijn.
+  - Bij ‘ja’: vraagt bullets → schrijft `recentCommits` (max 5, nieuwste bovenaan) → commit code + `version.json` → push → maakt PR met dezelfde bullets.
+  - Bij ‘nee’: alleen commit.
+- Optie 4 (push) in `git-helper.ps1`:
+  - Checkt uncommitted changes; zo ja, eerst committen.
+  - Vraagt of push voor deployment is; bij ‘ja’ idem bullets-flow als boven, anders alleen push.
+- `auto-pr.ps1`:
+  - Haalt indien mogelijk bullets van vandaag uit `version.json`; anders vraagt om bullets, schrijft terug (max 5) en commit.
+  - PR-beschrijving bevat hetzelfde bulletblok (tussen markers) als in de app.
 
 ## 📌 Best Practices
 

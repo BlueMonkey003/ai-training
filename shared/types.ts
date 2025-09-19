@@ -15,6 +15,7 @@ export interface Restaurant {
     imageUrl: string;
     websiteUrl: string;
     menuUrl?: string;
+    menu?: RestaurantMenu;
     createdBy: string | User;
     createdAt: string;
     updatedAt: string;
@@ -39,6 +40,23 @@ export interface OrderItem {
     price?: number;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface RestaurantMenuItem {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+}
+
+export interface RestaurantMenuCategory {
+    id: string;
+    name: string;
+    items: RestaurantMenuItem[];
+}
+
+export interface RestaurantMenu {
+    categories: RestaurantMenuCategory[];
 }
 
 export interface Notification {

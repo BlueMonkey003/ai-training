@@ -32,7 +32,7 @@ Dit voegt test data toe:
 npm run seed:prod
 ```
 Dit voegt alleen toe:
-- Admin user (admin@bluemonkeys.nl)
+- Admin user (admin@bluemonkeysit.nl)
 - Wachtwoord: Admin123!@# (verander dit direct!)
 
 ## ⚠️ Belangrijke Opmerkingen
