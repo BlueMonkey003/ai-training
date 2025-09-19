@@ -133,14 +133,14 @@ export default function SettingsPage() {
                             {/* Laatste wijzigingen */}
                             <div className="pt-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-gray-600">Laatste wijzigingen</span>
+                                    <span className="font-medium">Laatste wijzigingen:</span>
                                 </div>
                                 {recentCommits.length > 0 ? (
-                                    <ul className="mt-2 space-y-1">
+                                    <ul className="mt-2 space-y-2">
                                         {recentCommits.map((c, idx) => (
-                                            <li key={idx} className="flex justify-between gap-4">
-                                                <span className="text-gray-700 truncate">{c.message}</span>
-                                                <span className="text-gray-500 whitespace-nowrap">{new Date(c.date).toLocaleDateString('nl-NL')}</span>
+                                            <li key={idx} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+                                                <span className="text-gray-700 break-words">{c.message}</span>
+                                                <span className="text-gray-500 sm:text-right">{new Date(c.date).toLocaleDateString('nl-NL')}</span>
                                             </li>
                                         ))}
                                     </ul>
