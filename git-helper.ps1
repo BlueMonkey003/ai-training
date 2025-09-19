@@ -151,47 +151,6 @@ function Commit-Changes {
         }
     }
     
-    # Optioneel: release notes (bulletpoints) nu vastleggen zodat deze meegaan in DEZE commit
-    $captureNotes = Read-Host "\nRelease notes (bulletpoints) nu toevoegen aan version.json en meestagen? (j/n)"
-    if ($captureNotes -eq 'j') {
-        Write-Host "\n📝 Vul de wijzigingen in (ENTER op lege regel om te stoppen)" -ForegroundColor Yellow
-        $bullets = @()
-        while ($true) {
-            $line = Read-Host "-"
-            if ([string]::IsNullOrWhiteSpace($line)) { break }
-            $bullets += $line.Trim()
-        }
-        if ($bullets.Count -gt 0) {
-            try {
-                $versionFile = Join-Path $PSScriptRoot "..\version.json"
-                if (Test-Path $versionFile) {
-                    $versionData = Get-Content $versionFile -Raw | ConvertFrom-Json
-                    if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
-                        $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
-                    }
-                    $today = Get-Date -Format 'yyyy-MM-dd'
-                    $newItems = @()
-                    foreach ($b in $bullets) { $newItems += @{ date = $today; message = $b } }
-                    # Voeg nieuw bovenaan toe
-                    $versionData.recentCommits = @($newItems) + @($versionData.recentCommits)
-                    # Optioneel: begrens op 50 om growth te beperken
-                    if ($versionData.recentCommits.Count -gt 50) {
-                        $versionData.recentCommits = $versionData.recentCommits[0..49]
-                    }
-                    $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
-                    git add $versionFile | Out-Null
-                    Write-Success "Release notes toegevoegd aan version.json en gestaged"
-                }
-                else {
-                    Write-Warning "version.json niet gevonden, sla release notes stap over"
-                }
-            }
-            catch {
-                Write-Warning "Kon version.json niet bijwerken: $_"
-            }
-        }
-    }
-
     # Commit type voor conventional commits
     Write-Host "`nCommit type:" -ForegroundColor Cyan
     Write-Host "1. feat: (nieuwe feature)"
