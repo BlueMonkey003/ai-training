@@ -95,7 +95,7 @@ export default function OrderDetailPage() {
             };
             if (formData.price) data.price = parseFloat(formData.price);
             if (menu && formData.itemName && formData.itemName.includes('::')) {
-                const [catId, itemId] = formData.itemName.split('::');
+                const itemId = formData.itemName.split('::')[1];
                 data.menuItemId = itemId;
                 delete data.price;
                 delete data.itemName;
@@ -168,7 +168,6 @@ export default function OrderDetailPage() {
     }
 
     const restaurant = order.restaurantId as Restaurant;
-    const userItems = getUserItems();
     const canAddItem = order.status === 'open' && !showForm;
 
     return (

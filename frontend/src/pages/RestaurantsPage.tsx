@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Plus, Edit, Trash2, ExternalLink, X, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function RestaurantsPage() {
