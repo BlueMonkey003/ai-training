@@ -90,11 +90,20 @@ jobs:
           # Ensure full git history (needed for recent commits)
           try {
             $isShallow = (git rev-parse --is-shallow-repository) 2>$null
+            $token = $env:SYSTEM_ACCESSTOKEN
             if ($isShallow -and $isShallow.Trim().ToLower() -eq 'true') {
               Write-Host "[INFO] Repo is shallow. Fetching full history..."
-              git fetch --unshallow origin
+              if ($token) {
+                git -c "http.extraheader=AUTHORIZATION: bearer $token" fetch --unshallow origin
+              } else {
+                git fetch --unshallow origin
+              }
             } else {
-              git fetch --all --tags --prune
+              if ($token) {
+                git -c "http.extraheader=AUTHORIZATION: bearer $token" fetch --all --tags --prune
+              } else {
+                git fetch --all --tags --prune
+              }
             }
           } catch {
             Write-Host "[WARN] Could not fetch full history: $_"

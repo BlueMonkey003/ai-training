@@ -58,16 +58,29 @@ try {
     # Ensure full git history is available for recent commits
     try {
         $isShallow = (git rev-parse --is-shallow-repository) 2>$null
+        $token = $env:SYSTEM_ACCESSTOKEN
         if ($isShallow -and $isShallow.Trim().ToLower() -eq 'true') {
             Write-Host "[INFO] Repository is shallow. Fetching full history..."
-            git fetch --unshallow origin
+            if ($token) {
+                git -c "http.extraheader=AUTHORIZATION: bearer $token" fetch --unshallow origin
+            }
+            else {
+                git fetch --unshallow origin
+            }
         }
         else {
-            git fetch --all --tags --prune
+            if ($token) {
+                git -c "http.extraheader=AUTHORIZATION: bearer $token" fetch --all --tags --prune
+            }
+            else {
+                git fetch --all --tags --prune
+            }
         }
+        $global:LASTEXITCODE = 0
     }
     catch {
         Write-Host "[WARN] Could not verify/fetch git history: $_"
+        $global:LASTEXITCODE = 0
     }
 
     # Read current version
