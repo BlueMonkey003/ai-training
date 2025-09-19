@@ -151,6 +151,9 @@ function Commit-Changes {
         }
     }
     
+    # Vraag of we release notes willen toevoegen en PR willen aanmaken
+    $wantReleaseNotes = Read-Host "`nRelease notes toevoegen en PR aanmaken na deze commit? (j/n)"
+
     # Commit type voor conventional commits
     Write-Host "`nCommit type:" -ForegroundColor Cyan
     Write-Host "1. feat: (nieuwe feature)"
@@ -177,21 +180,44 @@ function Commit-Changes {
     
     $message = Read-Host "Commit bericht"
     if ($message) {
+        # Als release notes gewenst: bullets vragen en version.json alvast toevoegen aan staging
+        if ($wantReleaseNotes -eq 'j') {
+            Write-Host "`n📝 Vul de release notes in (bulletpoints). ENTER op lege regel om te stoppen." -ForegroundColor Yellow
+            $bullets = @()
+            while ($true) {
+                $line = Read-Host "-"
+                if ([string]::IsNullOrWhiteSpace($line)) { break }
+                $bullets += $line.Trim()
+            }
+            if ($bullets.Count -gt 0) {
+                try {
+                    $versionFile = Join-Path $PSScriptRoot "..\version.json"
+                    if (Test-Path $versionFile) {
+                        $versionData = Get-Content $versionFile -Raw | ConvertFrom-Json
+                        if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
+                            $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
+                        }
+                        $today = Get-Date -Format 'yyyy-MM-dd'
+                        $newItems = @()
+                        foreach ($b in $bullets) { $newItems += @{ date = $today; message = $b } }
+                        $versionData.recentCommits = @($newItems) + @($versionData.recentCommits)
+                        $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
+                        git add $versionFile | Out-Null
+                        Write-Success "Release notes toegevoegd en gestaged"
+                    }
+                }
+                catch { Write-Warning "Kon version.json niet bijwerken: $_" }
+            }
+        }
+
         git commit -m "$prefix$message"
         if ($?) {
             Write-Success "✅ Commit succesvol!"
 
-            # Eerst PR aanbieden (aanbevolen): dit vraagt bullets, schrijft version.json en pusht daarna
-            $createPRNow = Read-Host "`nNu een Pull Request aanmaken (aanbevolen)? (j/n)"
-            if ($createPRNow -eq 'j') {
-                Create-PullRequest
-                return
-            }
-
-            # Anders: alleen pushen (zonder PR)
-            $pushNow = Read-Host "Alleen pushen? (j/n)"
-            if ($pushNow -eq 'j') {
+            if ($wantReleaseNotes -eq 'j') {
+                # Push en PR aanmaken
                 Push-Changes
+                Create-PullRequest
                 return
             }
         }
@@ -206,15 +232,51 @@ function Push-Changes {
     Write-Host "═══════════════════════════════════" -ForegroundColor DarkGray
     Write-Info "Branch: $currentBranch"
     
+    # Check of er nog on-gecommit werk is
+    if (git status --porcelain) {
+        Write-Warning "Er staan niet-gecommitte wijzigingen. Commit eerst met optie 3."
+        return
+    }
+
+    # Vraag of deze push onderdeel is van deployment (release notes + PR)
+    $deployFlow = Read-Host "Deze push gebruiken voor deployment (release notes + PR)? (j/n)"
+
+    if ($deployFlow -eq 'j') {
+        # Bulletpoints vragen → version.json bijwerken → commit → push → PR
+        Write-Host "`n📝 Vul de release notes in (bulletpoints). ENTER op lege regel om te stoppen." -ForegroundColor Yellow
+        $bullets = @()
+        while ($true) {
+            $line = Read-Host "-"
+            if ([string]::IsNullOrWhiteSpace($line)) { break }
+            $bullets += $line.Trim()
+        }
+        if ($bullets.Count -gt 0) {
+            try {
+                $versionFile = Join-Path $PSScriptRoot "..\version.json"
+                if (Test-Path $versionFile) {
+                    $versionData = Get-Content $versionFile -Raw | ConvertFrom-Json
+                    if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {
+                        $versionData | Add-Member -NotePropertyName recentCommits -NotePropertyValue @() -Force
+                    }
+                    $today = Get-Date -Format 'yyyy-MM-dd'
+                    $newItems = @()
+                    foreach ($b in $bullets) { $newItems += @{ date = $today; message = $b } }
+                    $versionData.recentCommits = @($newItems) + @($versionData.recentCommits)
+                    $versionData | ConvertTo-Json -Depth 10 | Set-Content $versionFile
+                    git add $versionFile | Out-Null
+                    git commit -m "chore: update release notes in version.json [skip ci]" | Out-Null
+                }
+            }
+            catch { Write-Warning "Kon version.json niet bijwerken: $_" }
+        }
+    }
+
     Write-Host "`nPushing..." -ForegroundColor Cyan
     git push -u origin $currentBranch 2>&1 | Tee-Object -Variable pushOutput
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "✅ Push succesvol!"
-        
-        # Bied PR flow standaard aan na succesvolle push (eenmalig)
-        $createPR = Read-Host "Wil je nu een Pull Request aanmaken? (j/n)"
-        if ($createPR -eq 'j') {
+        if ($deployFlow -eq 'j') {
             Create-PullRequest
             return
         }
