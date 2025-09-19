@@ -440,27 +440,49 @@ function Delete-Branch {
     Write-Host "═══════════════════════════════════" -ForegroundColor DarkGray
     
     Write-Host "`nLokale branches:" -ForegroundColor Cyan
-    git branch
+    $current = git rev-parse --abbrev-ref HEAD
+    $branchesRaw = git for-each-ref --format='%(refname:short)' refs/heads/
+    $branches = @()
+    $idx = 1
+    foreach ($b in $branchesRaw) {
+        $label = $b
+        if ($b -eq $current) { $label = "$b  (huidig)" }
+        Write-Host ("  {0}. {1}" -f $idx, $label)
+        $branches += $b
+        $idx++
+    }
     
-    $branchName = Read-Host "`nWelke branch verwijderen?"
-    if ($branchName) {
-        if ($branchName -eq "main") {
-            Write-Error "❌ Kan main branch niet verwijderen!"
-        }
-        else {
-            $deleteRemote = Read-Host "Ook van remote verwijderen? (j/n)"
-            
-            # Delete local
-            git branch -D $branchName
-            if ($?) {
-                Write-Success "✅ Lokale branch verwijderd"
+    $choice = Read-Host "`nWelke branch(es) verwijderen? (nummers of namen, gescheiden door spatie/komma)"
+    if ($null -ne $choice -and $choice.Trim() -ne "") {
+        $tokens = $choice -split '[,\s]+' | Where-Object { $_ -ne '' }
+        $toDelete = @()
+        foreach ($t in $tokens) {
+            if ($t -match '^[0-9]+$') {
+                $i = [int]$t
+                if ($i -ge 1 -and $i -le $branches.Count) { $toDelete += $branches[$i-1] }
+            } else {
+                $toDelete += $t
             }
-            
-            # Delete remote if requested
-            if ($deleteRemote -eq 'j') {
-                git push origin --delete $branchName
-                if ($?) {
-                    Write-Success "✅ Remote branch verwijderd"
+        }
+        $toDelete = $toDelete | Where-Object { $_ -and $_ -ne 'main' } | Select-Object -Unique
+        if ($toDelete.Count -eq 0) {
+            Write-Warning "Geen geldige branches geselecteerd."
+        } else {
+            if ($toDelete -contains $current) {
+                Write-Warning "Huidige branch kan niet verwijderd worden: $current"
+                $toDelete = $toDelete | Where-Object { $_ -ne $current }
+            }
+            if ($toDelete.Count -gt 0) {
+                Write-Host "Te verwijderen branches:" -ForegroundColor Cyan
+                $toDelete | ForEach-Object { Write-Host "  - $_" }
+                $deleteRemote = Read-Host "Ook van remote verwijderen? (j/n)"
+                foreach ($name in $toDelete) {
+                    git branch -D $name
+                    if ($?) { Write-Success "✅ Lokale branch verwijderd: $name" } else { Write-Error "❌ Mislukt: $name" }
+                    if ($deleteRemote -eq 'j') {
+                        git push origin --delete $name
+                        if ($?) { Write-Success "✅ Remote branch verwijderd: $name" }
+                    }
                 }
             }
         }
