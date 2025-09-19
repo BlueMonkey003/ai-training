@@ -87,6 +87,19 @@ jobs:
           Write-Host "           SMART VERSION UPDATE"
           Write-Host "════════════════════════════════════════════════"
           
+          # Ensure full git history (needed for recent commits)
+          try {
+            $isShallow = (git rev-parse --is-shallow-repository) 2>$null
+            if ($isShallow -and $isShallow.Trim().ToLower() -eq 'true') {
+              Write-Host "[INFO] Repo is shallow. Fetching full history..."
+              git fetch --unshallow origin
+            } else {
+              git fetch --all --tags --prune
+            }
+          } catch {
+            Write-Host "[WARN] Could not fetch full history: $_"
+          }
+
           # Get commit info
           $commitMessage = git log -1 --pretty=%B
           $commitMessageFirstLine = ($commitMessage -split "`n")[0].Trim()
