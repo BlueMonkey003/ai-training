@@ -1,19 +1,15 @@
 {
   "version": "1.7.0",
   "lastUpdated": "2025-09-19",
-  "buildNumber": 12,
+  "buildNumber": 11,
   "recentCommits": [
     {
-      "date": "2025-09-19 12:41:48 +0000",
-      "message": "Update azure-pipelines.yml for Azure Pipelines"
+      "message": "Versienummer zichtbaar in de header",
+      "date": "2025-09-19"
     },
     {
-      "date": "2025-09-19 12:40:45 +0000",
-      "message": "Merged PR 38: 🔧 fix: Laatstetest"
-    },
-    {
-      "date": "2025-09-19 12:40:02 +0000",
-      "message": "Updated version.json"
+      "message": "Laatste wijzigingen inzichtelijk op de instellingen pagina",
+      "date": "2025-09-19"
     }
   ]
 }
