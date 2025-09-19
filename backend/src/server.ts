@@ -20,7 +20,7 @@ import notificationRoutes from "./routes/notification.routes";
 import uploadRoutes from "./routes/upload.routes";
 import healthRoutes from "./routes/health.routes";
 
-// Socket handlers
+// Socket  handlers
 import { setupSocketHandlers } from "./sockets/socketHandlers";
 
 // Error middleware
