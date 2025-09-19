@@ -162,8 +162,7 @@ router.get('/me', authenticate, getMe);
  *                 type: string
  *                 format: email
  *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
- *                 description: Moet eindigen op @bluemonkeysit.nl
- *                 description: Het emailadres van het account
+ *                 description: Het emailadres van het account (moet eindigen op @bluemonkeysit.nl)
  *     responses:
  *       200:
  *         description: Email verstuurd (als account bestaat)
@@ -202,8 +201,7 @@ router.post('/forgot-password', forgotPassword);
  *                 type: string
  *                 format: email
  *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
- *                 description: Moet eindigen op @bluemonkeysit.nl
- *                 description: Het emailadres van het account
+ *                 description: Het emailadres van het account (moet eindigen op @bluemonkeysit.nl)
  *               tempPassword:
  *                 type: string
  *                 description: Het tijdelijke wachtwoord uit de email

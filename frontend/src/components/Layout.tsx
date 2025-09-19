@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { Bell, User, LogOut, Utensils, Building2, Menu, X, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 export default function Layout() {
     const { user, logout, isAdmin, unreadNotifications, refreshNotifications } = useAuth();
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [version, setVersion] = useState<string | null>(null);
+    const [buildNumber, setBuildNumber] = useState<number | null>(null);
+
+    useEffect(() => {
+        api.get('/health')
+            .then((response) => {
+                if (response.data?.version) setVersion(response.data.version);
+                if (response.data?.buildNumber !== undefined) setBuildNumber(response.data.buildNumber);
+            })
+            .catch(() => {
+                // geen blocking: header blijft zonder versie indien health faalt
+            });
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -48,6 +62,10 @@ export default function Layout() {
 
                         {/* Desktop User Menu */}
                         <div className="hidden md:flex items-center space-x-4">
+                            {/* Versie rechts uitgelijnd */}
+                            {version && (
+                                <span className="text-xs sm:text-sm text-gray-500 mr-2">v{version}{buildNumber !== null ? ` (build ${buildNumber})` : ''}</span>
+                            )}
                             <Link
                                 to="/notifications"
                                 className="relative p-2 text-gray-600 hover:text-gray-900"
