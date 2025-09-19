@@ -1,7 +1,7 @@
 {
   "version": "1.7.0",
   "lastUpdated": "2025-09-19",
-  "buildNumber": 11,
+  "buildNumber": 12,
   "recentCommits": [
     {
       "message": "Versienummer zichtbaar in de header",
