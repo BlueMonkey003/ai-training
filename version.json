@@ -1,19 +1,19 @@
 {
-  "version": "1.7.0",
+  "version": "1.7.1",
   "lastUpdated": "2025-09-19",
-  "buildNumber": 11,
+  "buildNumber": 12,
   "recentCommits": [
     {
-      "date": "2025-09-19 09:47:37 +0000",
-      "message": "Merged PR 33: ✨ feat: Emailveld"
+      "date": "2025-09-19 10:07:51 +0000",
+      "message": "Merged PR 34: 🐛 fix: Laatstewijzigingen"
     },
     {
-      "date": "2025-09-19 11:47:18 +0200",
-      "message": "fix: Versienummer van de applicatie in de header. Laatste 3 wijzigingen in de app zichtbaar in instellingen pagina."
+      "date": "2025-09-19 12:06:51 +0200",
+      "message": "fix: cd"
     },
     {
-      "date": "2025-09-19 09:44:12 +0000",
-      "message": "chore: bump version [skip ci]"
+      "date": "2025-09-19 12:06:07 +0200",
+      "message": "fix: Fix"
     }
   ]
 }
