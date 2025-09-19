@@ -191,7 +191,7 @@ function Commit-Changes {
             }
             if ($bullets.Count -gt 0) {
                 try {
-                    $versionFile = Join-Path $PSScriptRoot "..\version.json"
+                    $versionFile = Join-Path $PSScriptRoot "version.json"
                     if (Test-Path $versionFile) {
                         $versionData = Get-Content $versionFile -Raw | ConvertFrom-Json
                         if (-not ($versionData.PSObject.Properties.Name -contains 'recentCommits')) {

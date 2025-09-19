@@ -4,6 +4,14 @@
   "buildNumber": 11,
   "recentCommits": [
     {
+      "message": "Versienummer zichtbaar in de header1",
+      "date": "2025-09-19"
+    },
+    {
+      "message": "Laatste wijzigingen inzichtelijk op de instellingen pagina",
+      "date": "2025-09-19"
+    },
+    {
       "date": "2025-09-19 09:47:37 +0000",
       "message": "Merged PR 33: ✨ feat: Emailveld"
     },
