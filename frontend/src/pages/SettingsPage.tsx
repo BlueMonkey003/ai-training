@@ -22,7 +22,9 @@ export default function SettingsPage() {
                     setBuildNumber(response.data.buildNumber);
                 }
                 if (Array.isArray(response.data.recentCommits)) {
-                    setRecentCommits(response.data.recentCommits.slice(0, 3));
+                    const items = response.data.recentCommits as { message: string; date: string }[];
+                    const lastThreeNewestFirst = items.slice(-3).reverse();
+                    setRecentCommits(lastThreeNewestFirst);
                 }
             })
             .catch(() => {
