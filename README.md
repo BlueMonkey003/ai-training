@@ -54,6 +54,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - Auth: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`
 - Users: `GET /users` (admin), `GET/PATCH /users/{id}`, `PATCH /users/{id}/role`, `PATCH /users/{id}/status`, `POST /users/{id}/reset-password`, `DELETE /users/{id}`
 - Restaurants: `GET /restaurants`; `POST/PATCH/DELETE /restaurants` (admin, met upload)
+ - Restaurants: `GET /restaurants`; `POST/PATCH/DELETE /restaurants` (admin, met upload); Menu: `GET /restaurants/{id}/menu`, `POST /restaurants/{id}/menu/import` (XML/JSON of `multipart/form-data`, admin)
 - Orders: `GET /orders` (filters: status/date), `POST /orders` (admin), `GET /orders/{id}`, `PATCH /orders/{id}` (close, admin)
 - Order items: `POST/PATCH/DELETE /orders/{id}/items`
 - Notifications: `GET /notifications?unread=bool`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`
