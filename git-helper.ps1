@@ -156,25 +156,27 @@ function Commit-Changes {
 
     # Commit type voor conventional commits
     Write-Host "`nCommit type:" -ForegroundColor Cyan
-    Write-Host "1. feat: (nieuwe feature)"
-    Write-Host "2. fix: (bug fix)"
-    Write-Host "3. docs: (documentatie)"
-    Write-Host "4. style: (formatting)"
-    Write-Host "5. refactor: (code restructuring)"
-    Write-Host "6. test: (tests toevoegen)"
-    Write-Host "7. chore: (maintenance)"
-    Write-Host "8. custom (geen prefix)"
+    Write-Host "1. 💥 major: (breaking change)"
+    Write-Host "2. feat: (nieuwe feature)"
+    Write-Host "3. fix: (bug fix)"
+    Write-Host "4. docs: (documentatie)"
+    Write-Host "5. style: (formatting)"
+    Write-Host "6. refactor: (code restructuring)"
+    Write-Host "7. test: (tests toevoegen)"
+    Write-Host "8. chore: (maintenance)"
+    Write-Host "9. custom (geen prefix)"
     
-    $commitType = Read-Host "Kies type (1-8)"
+    $commitType = Read-Host "Kies type (1-9)"
     $prefix = switch ($commitType) {
-        '1' { "feat: " }
-        '2' { "fix: " }
-        '3' { "docs: " }
-        '4' { "style: " }
-        '5' { "refactor: " }
-        '6' { "test: " }
-        '7' { "chore: " }
-        '8' { "" }
+        '1' { "💥 major: " }
+        '2' { "feat: " }
+        '3' { "fix: " }
+        '4' { "docs: " }
+        '5' { "style: " }
+        '6' { "refactor: " }
+        '7' { "test: " }
+        '8' { "chore: " }
+        '9' { "" }
         default { "" }
     }
     
@@ -279,6 +281,8 @@ function Push-Changes {
                 }
                 catch { Write-Warning "Kon version.json niet bijwerken: $_" }
             }
+
+            # Versiebump via commit message (major/feat/fix) – geen extra prompt hier
         }
     }
 
@@ -459,15 +463,17 @@ function Delete-Branch {
         foreach ($t in $tokens) {
             if ($t -match '^[0-9]+$') {
                 $i = [int]$t
-                if ($i -ge 1 -and $i -le $branches.Count) { $toDelete += $branches[$i-1] }
-            } else {
+                if ($i -ge 1 -and $i -le $branches.Count) { $toDelete += $branches[$i - 1] }
+            }
+            else {
                 $toDelete += $t
             }
         }
         $toDelete = $toDelete | Where-Object { $_ -and $_ -ne 'main' } | Select-Object -Unique
         if ($toDelete.Count -eq 0) {
             Write-Warning "Geen geldige branches geselecteerd."
-        } else {
+        }
+        else {
             if ($toDelete -contains $current) {
                 Write-Warning "Huidige branch kan niet verwijderd worden: $current"
                 $toDelete = $toDelete | Where-Object { $_ -ne $current }
@@ -790,6 +796,8 @@ function Quick-Deploy {
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
 }
+
+# Interactieve versie bump (los van push/commit flow)
 
 # Hoofdloop
 do {

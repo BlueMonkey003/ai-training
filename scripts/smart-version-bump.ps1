@@ -41,6 +41,9 @@ function Get-ChangeTypeFromCommit {
     
     # Conventional commit patterns
     switch -Regex ($message.ToLower()) {
+        # Emoji-stijl of niet-alfanumerieke prefixen toegestaan, bijv. "💥 major: ..."
+        "^[\p{P}\p{S}\s]*major:" { return "major" }
+        "^[\p{P}\p{S}\s]*breaking:" { return "major" }
         "^fix:" { return "patch" }
         "^hotfix:" { return "patch" }
         "^bugfix:" { return "patch" }

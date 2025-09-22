@@ -88,7 +88,9 @@ Voor lokaal testen of handmatige bumps:
 .\scripts\smart-version-bump.ps1
 
 # Specifiek type
-.\scripts\smart-version-bump.ps1 -Type minor
+.\scripts\smart-version-bump.ps1 -Type major   # MAJOR bump (X.0.0)
+.\scripts\smart-version-bump.ps1 -Type minor   # MINOR bump (x.Y.0)
+.\scripts\smart-version-bump.ps1 -Type patch   # PATCH bump (x.y.Z)
 
 # Dry run (geen wijzigingen)
 .\scripts\smart-version-bump.ps1 -DryRun
@@ -99,6 +101,8 @@ Voor lokaal testen of handmatige bumps:
 # Met commit message
 .\scripts\smart-version-bump.ps1 -CommitMessage "feat: added new feature"
 ```
+
+Let op: versiebump gebeurt via commit messages of branchnamen; er is geen apart bump-menu.
 
 ## 📊 Version File
 

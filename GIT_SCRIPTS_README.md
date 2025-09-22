@@ -21,6 +21,7 @@ Een interactief menu-gestuurd script met alle Git functionaliteiten.
 - Sync met main branch
 - Stash management
 - Git log bekijken
+ - Integratie met release notes (commit flow); versiebump via commit messages
 
 ### 2. **quick-commit.ps1** (PowerShell - Snel Committen)
 Voor snelle commits en pushes.
