@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Utensils } from 'lucide-react';
+import EmailWithDomainInput from '../components/EmailWithDomainInput';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -14,12 +15,22 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    const DOMAIN = '@bluemonkeysit.nl';
+
+    const normalizeEmail = (raw: string) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return '';
+        const local = trimmed.split('@')[0];
+        return `${local.toLowerCase()}${DOMAIN}`;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            await login(email, password);
+            const fullEmail = normalizeEmail(email);
+            await login(fullEmail, password);
             navigate('/');
         } catch (error) {
             // Error wordt afgehandeld in AuthContext
@@ -53,14 +64,8 @@ export default function LoginPage() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="naam@voorbeeld.nl"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
+                                <EmailWithDomainInput id="email" value={email} onChange={setEmail} />
+                                <p className="text-xs text-gray-500">Vul alleen je gebruikersnaam in (zonder @); het domein wordt automatisch toegevoegd.</p>
                             </div>
 
                             <div className="space-y-2">

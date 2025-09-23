@@ -2,7 +2,7 @@
 
 ## ⚠️ Email Domein Restrictie
 
-**Belangrijk:** Alleen emailadressen met het domein `@bluemonkeysit.nl` kunnen zich registreren in de applicatie. Dit is een security maatregel om ervoor te zorgen dat alleen medewerkers van Blue Monkeys IT toegang hebben tot het systeem.
+**Belangrijk:** Alleen emailadressen met het domein `@bluemonkeysit.nl` kunnen zich registreren/inloggen en wachtwoord resetten. De frontend laat gebruikers enkel de lokale gebruikersnaam invullen; het domein wordt automatisch toegevoegd. De backend valideert en handhaaft dit ook.
 
 ## 📧 Email Configuratie
 
@@ -71,6 +71,7 @@ Voor productie wordt aangeraden om een professionele email service te gebruiken:
 - Tijdelijk wachtwoord wordt gehashed opgeslagen
 - Response geeft nooit aan of email bestaat (voorkomt email enumeration)
 - Na succesvol resetten wordt bevestigingsmail gestuurd
+- Wachtwoordbeleid: minimaal 12 tekens, ≥1 hoofdletter, ≥1 kleine letter, ≥1 cijfer, ≥1 speciaal teken; mag geen deel van naam of e‑mail bevatten; server-side HIBP breach check bij register en reset.
 
 ## 🧪 Testen
 

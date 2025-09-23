@@ -4,6 +4,7 @@ import { generateToken } from '../utils/jwt.utils';
 import { ApiError } from '../middleware/error.middleware';
 import { generateTempPassword, sendPasswordResetEmail, sendPasswordChangedEmail } from '../services/email.service';
 import bcrypt from 'bcrypt';
+import { validatePasswordComplexity, isPasswordPwned } from '../utils/passwordPolicy';
 
 export const register = async (
     req: Request,
@@ -24,6 +25,22 @@ export const register = async (
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             const error = new Error('Email is al in gebruik') as ApiError;
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Wachtwoordbeleid afdwingen
+        const complexity = validatePasswordComplexity(password, name, email);
+        if (!complexity.ok) {
+            const error = new Error(complexity.message || 'Ongeldig wachtwoord') as ApiError;
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // HIBP breach check (k-anonim)
+        const pwned = await isPasswordPwned(password);
+        if (pwned) {
+            const error = new Error('Dit wachtwoord is bekend uit datalekken, kies een ander wachtwoord') as ApiError;
             error.statusCode = 400;
             throw error;
         }
@@ -182,6 +199,22 @@ export const resetPassword = async (
         const isValidTemp = await bcrypt.compare(tempPassword, user.resetPasswordToken);
         if (!isValidTemp) {
             const error = new Error('Ongeldig tijdelijk wachtwoord') as ApiError;
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Wachtwoordbeleid afdwingen
+        const complexity = validatePasswordComplexity(newPassword, undefined, email);
+        if (!complexity.ok) {
+            const error = new Error(complexity.message || 'Ongeldig wachtwoord') as ApiError;
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // HIBP breach check
+        const pwned = await isPasswordPwned(newPassword);
+        if (pwned) {
+            const error = new Error('Dit wachtwoord is bekend uit datalekken, kies een ander wachtwoord') as ApiError;
             error.statusCode = 400;
             throw error;
         }

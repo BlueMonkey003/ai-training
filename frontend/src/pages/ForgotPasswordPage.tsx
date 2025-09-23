@@ -6,6 +6,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Utensils, ArrowLeft, Mail } from 'lucide-react';
 import api from '../services/api';
+import EmailWithDomainInput from '../components/EmailWithDomainInput';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -14,13 +15,34 @@ export default function ForgotPasswordPage() {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    const DOMAIN = '@bluemonkeysit.nl';
+
+    const normalizeEmail = (raw: string) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return '';
+        const local = trimmed.split('@')[0];
+        return `${local.toLowerCase()}${DOMAIN}`;
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value.replace(/@.*/, '');
+        setEmail(newValue);
+    };
+
+    const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === '@') {
+            e.preventDefault();
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            await api.post('/auth/forgot-password', { email });
+            const fullEmail = normalizeEmail(email);
+            await api.post('/auth/forgot-password', { email: fullEmail });
             setSubmitted(true);
         } catch (error: any) {
             setError(error.response?.data?.message || 'Er is een fout opgetreden');
@@ -101,15 +123,8 @@ export default function ForgotPasswordPage() {
                         <CardContent>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="naam@voorbeeld.nl"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    autoFocus
-                                />
+                                <EmailWithDomainInput id="email" value={email} onChange={setEmail} autoFocus />
+                                <p className="text-xs text-gray-500">Vul alleen je gebruikersnaam in (zonder @); het domein wordt automatisch toegevoegd.</p>
                             </div>
                             {error && (
                                 <p className="mt-2 text-sm text-red-600">{error}</p>

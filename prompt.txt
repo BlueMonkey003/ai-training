@@ -8,11 +8,12 @@ Wat we bouwen
 - Applicatie: LunchMonkeys – interne webapp om dagelijks lunchbestellingen te beheren.
 - Rollen: admin en employee.
 - Kernflows:
-  - Auth (domeinrestrictie @bluemonkeysit.nl), JWT, protected routes, admin-only acties.
+- Auth (domeinrestrictie @bluemonkeysit.nl), JWT, protected routes, admin-only acties. Frontend laat alleen lokale gebruikersnaam invullen; domein wordt automatisch toegevoegd. Server valideert dit eveneens.
   - Restaurants: CRUD + afbeelding (Cloudinary), website, optioneel menulink.
   - Orders: admin opent of sluit een dagorder; medewerkers voegen items toe (naam, notities, prijs). Realtime updates via Socket.IO (nieuwe order, order gesloten). Bij openen/sluiten krijgen alle gebruikers een notificatie met route naar de order.
   - Notificaties: lijst, mark as read, mark all as read, realtime bell-counter. Admins ontvangen automatisch een notificatie bij het uploaden van een bonnetje.
-  - Uploads: profielfoto (multipart/form-data, Cloudinary).
+- Uploads: profielfoto (multipart/form-data, Cloudinary).
+  - Wachtwoordbeleid: min. 12 tekens, ≥1 hoofdletter, ≥1 kleine letter, ≥1 cijfer, ≥1 speciaal teken; mag geen deel van naam of e‑mail bevatten; HIBP breach check (server-side) bij registreren en resetten.
   - Instellingen/Over: versie/build rechts in de header; “Laatste wijzigingen” (laatste 3 bullets uit version.json, nieuwste bovenaan). Mobiel: tekst niet afkappen; volledige tekst leesbaar (break-words).
   - Menu import (XML/JSON): we ondersteunen uploaden van een menuconfig (XML/JSON). Gebruik en onderhoud de bestaande documentatie (geen nieuwe .md-bestanden aanmaken; uitbreiden waar nodig in bestaande docs).
 

@@ -6,6 +6,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Utensils, CheckCircle } from 'lucide-react';
 import api from '../services/api';
+import EmailWithDomainInput from '../components/EmailWithDomainInput';
 
 export default function ResetPasswordPage() {
     const [email, setEmail] = useState('');
@@ -16,6 +17,26 @@ export default function ResetPasswordPage() {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
+
+    const DOMAIN = '@bluemonkeysit.nl';
+
+    const normalizeEmail = (raw: string) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return '';
+        const local = trimmed.split('@')[0];
+        return `${local.toLowerCase()}${DOMAIN}`;
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value.replace(/@.*/, '');
+        setEmail(newValue);
+    };
+
+    const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === '@') {
+            e.preventDefault();
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,8 +56,9 @@ export default function ResetPasswordPage() {
         setLoading(true);
 
         try {
+            const fullEmail = normalizeEmail(email);
             const response = await api.post('/auth/reset-password', {
-                email,
+                email: fullEmail,
                 tempPassword,
                 newPassword
             });
@@ -112,14 +134,8 @@ export default function ResetPasswordPage() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="naam@voorbeeld.nl"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
+                                <EmailWithDomainInput id="email" value={email} onChange={setEmail} />
+                                <p className="text-xs text-gray-500">Vul alleen je gebruikersnaam in (zonder @); het domein wordt automatisch toegevoegd.</p>
                             </div>
 
                             <div className="space-y-2">
@@ -142,12 +158,17 @@ export default function ResetPasswordPage() {
                                 <Input
                                     id="newPassword"
                                     type="password"
-                                    placeholder="Minimaal 6 karakters"
+                                    placeholder="Minimaal 12 karakters, 1 hoofdletter, 1 kleine letter, 1 cijfer, 1 speciaal teken"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
                                     required
-                                    minLength={6}
+                                    minLength={12}
                                 />
+                                <ul className="text-xs text-gray-500 list-disc ml-5 space-y-0.5">
+                                    <li>Minimaal 12 karakters</li>
+                                    <li>Minstens 1 hoofdletter, 1 kleine letter, 1 cijfer, 1 speciaal teken</li>
+                                    <li>Mag geen deel van je naam of e-mailadres bevatten</li>
+                                </ul>
                             </div>
 
                             <div className="space-y-2">

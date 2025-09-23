@@ -3,13 +3,14 @@
 Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrators beheren restaurants, openen/sluiten een dagelijkse order en beheren gebruikers. Medewerkers voegen hun eigen lunchitems toe. Iedereen krijgt realtime notificaties.
 
 ## 🌟 Kernfeatures
-- **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie alleen met e-mails die eindigen op `@bluemonkeysit.nl`.
+- **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie/login/reset met domeinrestrictie `@bluemonkeysit.nl`. Frontend laat gebruikers alleen de lokale gebruikersnaam invullen; het domein wordt automatisch toegevoegd. Server valideert dit ook.
 - **Restaurants**: Admin kan restaurants aanmaken/bewerken/verwijderen, incl. afbeelding (Cloudinary), website en optionele menulink.
 - **Orders & items**: Admin opent/sluitt dagorder; medewerkers voegen items toe (naam/notities/prijs). Realtime updates met Socket.IO. Bij openen en sluiten gaat een notificatie naar alle gebruikers.
 - **Notificaties**: Lijst, markeer gelezen/alles-gelezen; realtime bell-counter en toast bij nieuwe notificaties. Admins ontvangen automatisch een notificatie bij uploaden van een bonnetje. Notificaties bevatten nu een route (bijv. `/orders/{id}` of `/receipts`) en zijn klikbaar.
 - **Uploads**: Profielfoto upload via `multipart/form-data` naar Cloudinary.
 - **Bonnetjes (admin)**: upload bon bij gesloten order; overzicht met downloads; dashboards (totaal, per restaurant, per persoon).
 - **Versie-informatie**: Header toont `vX.Y.Z (build N)`; Over/Instellingen toont versie/build en de laatste wijzigingen.
+ - **Wachtwoordbeleid**: Min. 12 tekens, ≥1 hoofdletter, ≥1 kleine letter, ≥1 cijfer, ≥1 speciaal teken; mag geen deel van naam of e‑mail bevatten; server-side Have I Been Pwned (k‑anoniem) breach check.
 
 ## 🧱 Architectuur & stack
 - **Backend**: Node.js, Express, TypeScript, MongoDB (Mongoose), JWT, Socket.IO, Swagger (`swagger-ui-express` + `swagger-jsdoc`), `helmet`, `compression`, rate limiting, CORS.

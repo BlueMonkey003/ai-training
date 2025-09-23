@@ -53,10 +53,11 @@ const router = Router();
  *                 type: string
  *                 format: email
  *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
- *                 description: Moet eindigen op @bluemonkeysit.nl
+ *                 description: Moet eindigen op @bluemonkeysit.nl (frontend vult domein automatisch in)
  *               password:
  *                 type: string
- *                 minLength: 6
+ *                 minLength: 12
+ *                 description: Min. 12 tekens, incl. 1 hoofdletter, 1 kleine letter, 1 cijfer, 1 speciaal teken. Mag geen deel van naam of e-mail bevatten. Afgekeurd indien bekend in HIBP.
  *     responses:
  *       201:
  *         description: Gebruiker succesvol geregistreerd
@@ -96,7 +97,7 @@ router.post('/register', register);
  *                 type: string
  *                 format: email
  *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
- *                 description: Moet eindigen op @bluemonkeysit.nl
+ *                 description: Moet eindigen op @bluemonkeysit.nl (frontend vult domein automatisch in)
  *               password:
  *                 type: string
  *     responses:
@@ -162,7 +163,7 @@ router.get('/me', authenticate, getMe);
  *                 type: string
  *                 format: email
  *                 pattern: '^[^@]+@bluemonkeysit\.nl$'
- *                 description: Het emailadres van het account (moet eindigen op @bluemonkeysit.nl)
+ *                 description: Het emailadres van het account (moet eindigen op @bluemonkeysit.nl; frontend vult domein automatisch in)
  *     responses:
  *       200:
  *         description: Email verstuurd (als account bestaat)
@@ -207,8 +208,8 @@ router.post('/forgot-password', forgotPassword);
  *                 description: Het tijdelijke wachtwoord uit de email
  *               newPassword:
  *                 type: string
- *                 minLength: 6
- *                 description: Het nieuwe wachtwoord
+ *                 minLength: 12
+ *                 description: Min. 12 tekens, incl. 1 hoofdletter, 1 kleine letter, 1 cijfer, 1 speciaal teken. Mag geen deel van naam of e-mail bevatten. Afgekeurd indien bekend in HIBP.
  *     responses:
  *       200:
  *         description: Wachtwoord succesvol gewijzigd
