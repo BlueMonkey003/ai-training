@@ -19,7 +19,7 @@ export default function NotificationsPage() {
     useEffect(() => {
         fetchNotifications();
 
-        // Luister naar nieuwe notificaties
+        // Luister naar   nieuwe notificaties
         const handleNewNotification = (notification: Notification) => {
             setNotifications(prev => [notification, ...prev]);
         };
