@@ -18,6 +18,7 @@ import restaurantRoutes from "./routes/restaurant.routes";
 import orderRoutes from "./routes/order.routes";
 import notificationRoutes from "./routes/notification.routes";
 import uploadRoutes from "./routes/upload.routes";
+import receiptRoutes from "./routes/receipt.routes";
 import healthRoutes from "./routes/health.routes";
 
 // Socket  handlers
@@ -119,6 +120,7 @@ app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api", receiptRoutes);
 app.use("/api/health", healthRoutes);
 
 // Socket.IO handlers

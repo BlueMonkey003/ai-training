@@ -75,9 +75,9 @@ export const createOrder = async (
         // Emit nieuwe order event
         emitNewOrder(io, populatedOrder);
 
-        // Maak notificaties voor alle gebruikers
+        // Maak notificaties voor alle gebruikers (inclusief aanmaker)
         const { User } = await import('../models/User.model');
-        const users = await User.find({ _id: { $ne: req.user!._id } });
+        const users = await User.find({});
 
         const notifications = await Promise.all(
             users.map(user =>
@@ -85,6 +85,9 @@ export const createOrder = async (
                     userId: user._id,
                     type: 'order_reminder',
                     message: `Nieuwe lunch bestelling geopend voor ${(populatedOrder!.restaurantId as any).name}`,
+                    orderId: order._id,
+                    restaurantId: (populatedOrder!.restaurantId as any)._id,
+                    route: `/orders/${order._id}`,
                 })
             )
         );
@@ -158,15 +161,19 @@ export const closeOrder = async (
         // Emit order closed event
         emitOrderClosed(io, id, order);
 
-        // Maak notificaties voor alle deelnemers
-        const items = await OrderItem.find({ orderId: id }).distinct('userId');
+        // Maak notificaties voor alle gebruikers
+        const { User: UserModel } = await import('../models/User.model');
+        const allUsers = await UserModel.find({});
 
         const notifications = await Promise.all(
-            items.map(userId =>
+            allUsers.map(u =>
                 Notification.create({
-                    userId,
+                    userId: u._id,
                     type: 'order_closed',
                     message: `De bestelling voor ${(order.restaurantId as any).name} is gesloten`,
+                    orderId: order._id,
+                    restaurantId: (order.restaurantId as any)._id,
+                    route: `/orders/${order._id}`,
                 })
             )
         );

@@ -4,16 +4,24 @@
   "buildNumber": 16,
   "recentCommits": [
     {
+      "date": "2025-09-23",
+      "message": "Bonnetje uploaden na bestelling"
+    },
+    {
+      "date": "2025-09-23",
+      "message": "Alle statistieken inzien als admin van personen en restaurants"
+    },
+    {
+      "date": "2025-09-23",
+      "message": "Notificaties bugfixing"
+    },
+    {
       "date": "2025-09-19",
       "message": "Bestellen via dropdown met automatische prijzen wanneer menu aanwezig is"
     },
     {
       "date": "2025-09-19",
       "message": "Meerdere items per gebruiker per order toegestaan"
-    },
-    {
-      "date": "2025-09-19",
-      "message": "Menukaart import (XML/JSON) toegevoegd; embedded menu per restaurant"
     }
   ]
 }

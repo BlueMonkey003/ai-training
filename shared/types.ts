@@ -62,9 +62,13 @@ export interface RestaurantMenu {
 export interface Notification {
     _id: string;
     userId: string;
-    type: 'order_reminder' | 'order_closed' | 'new_item';
+    type: 'order_reminder' | 'order_closed' | 'new_item' | 'receipt_uploaded';
     message: string;
     read: boolean;
+    orderId?: string;
+    restaurantId?: string;
+    receiptId?: string;
+    route?: string;
     createdAt: string;
 }
 

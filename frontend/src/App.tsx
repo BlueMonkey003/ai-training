@@ -12,6 +12,7 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
+import ReceiptsPage from './pages/ReceiptsPage';
 import UserManagementPage from './pages/UserManagementPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -84,6 +85,12 @@ function AppRoutes() {
         <Route path="/users" element={
           <AdminRoute>
             <UserManagementPage />
+          </AdminRoute>
+        } />
+
+        <Route path="/receipts" element={
+          <AdminRoute>
+            <ReceiptsPage />
           </AdminRoute>
         } />
       </Route>

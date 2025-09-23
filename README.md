@@ -5,9 +5,10 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 ## 🌟 Kernfeatures
 - **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie alleen met e-mails die eindigen op `@bluemonkeysit.nl`.
 - **Restaurants**: Admin kan restaurants aanmaken/bewerken/verwijderen, incl. afbeelding (Cloudinary), website en optionele menulink.
-- **Orders & items**: Admin opent/sluitt dagorder; medewerkers voegen items toe (naam/notities/prijs). Realtime updates met Socket.IO.
-- **Notificaties**: Lijst, markeer gelezen/alles-gelezen; realtime bell-counter en toast bij nieuwe notificaties.
+- **Orders & items**: Admin opent/sluitt dagorder; medewerkers voegen items toe (naam/notities/prijs). Realtime updates met Socket.IO. Bij openen en sluiten gaat een notificatie naar alle gebruikers.
+- **Notificaties**: Lijst, markeer gelezen/alles-gelezen; realtime bell-counter en toast bij nieuwe notificaties. Admins ontvangen automatisch een notificatie bij uploaden van een bonnetje. Notificaties bevatten nu een route (bijv. `/orders/{id}` of `/receipts`) en zijn klikbaar.
 - **Uploads**: Profielfoto upload via `multipart/form-data` naar Cloudinary.
+- **Bonnetjes (admin)**: upload bon bij gesloten order; overzicht met downloads; dashboards (totaal, per restaurant, per persoon).
 - **Versie-informatie**: Header toont `vX.Y.Z (build N)`; Over/Instellingen toont versie/build en de laatste wijzigingen.
 
 ## 🧱 Architectuur & stack
@@ -59,6 +60,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - Order items: `POST/PATCH/DELETE /orders/{id}/items`
 - Notifications: `GET /notifications?unread=bool`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`
 - Upload: `POST /upload/profile`
+- Receipts (admin): `POST /orders/{orderId}/receipts` (multipart), `GET /receipts`, `GET /receipts/summary`, `GET /receipts/{id}`, `DELETE /receipts/{id}`, `GET /receipts/{id}/download`
 - Health: `GET /health` (status, versie, build, DB)
 
 Swagger is beschikbaar op `/api-docs`. Bij wijzigingen aan endpoints: altijd Swagger JSDoc-annotaties updaten.
