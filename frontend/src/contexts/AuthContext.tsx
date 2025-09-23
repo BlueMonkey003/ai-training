@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { User, Notification } from '../../../shared/types';
 import { authApi, notificationApi } from '../services/api';
 import socketService from '../services/socket';
