@@ -225,7 +225,27 @@ function Commit-Changes {
             if ($wantReleaseNotes -eq 'j') {
                 # Push (zonder extra vragen) en PR aanmaken
                 Push-Changes -SkipDeploy
-                Create-PullRequest
+                # Bepaal commit type uit prefix voor consistente PR-titel (major/feat/fix/chore etc.)
+                $typeForPR = ''
+                switch ($commitType) {
+                    '1' { $typeForPR = 'major' }
+                    '2' { $typeForPR = 'feat' }
+                    '3' { $typeForPR = 'fix' }
+                    '4' { $typeForPR = 'docs' }
+                    '5' { $typeForPR = 'style' }
+                    '6' { $typeForPR = 'refactor' }
+                    '7' { $typeForPR = 'test' }
+                    '8' { $typeForPR = 'chore' }
+                    default { $typeForPR = '' }
+                }
+                # Als auto-pr.ps1 bestaat, geef type door
+                $autoPrScript = Join-Path $PSScriptRoot "auto-pr.ps1"
+                if (Test-Path $autoPrScript) {
+                    & $autoPrScript -Type $typeForPR
+                }
+                else {
+                    Create-PullRequest
+                }
                 return
             }
         }

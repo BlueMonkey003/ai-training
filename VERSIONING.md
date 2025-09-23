@@ -123,7 +123,7 @@ Schema:
 
 Regels:
 - `recentCommits` bevat maximaal 5 items; nieuwste bovenaan.
-- De frontend toont de laatste 3 bullets (nieuwste eerst) op de Over/Instellingen pagina.
+- De frontend toont de laatste 5 bullets (nieuwste eerst) op de Over/Instellingen pagina.
 - Pipelines overschrijven `recentCommits` NIET; de bullets blijven leidend voor app en PR-tekst.
 
 ## 🔍 Versie Informatie

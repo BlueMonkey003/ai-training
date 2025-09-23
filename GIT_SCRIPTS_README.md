@@ -22,6 +22,7 @@ Een interactief menu-gestuurd script met alle Git functionaliteiten.
 - Stash management
 - Git log bekijken
  - Integratie met release notes (commit flow); versiebump via commit messages
+ - PR-creator consistentie: gekozen commit type (bijv. 💥 major/feat/fix) wordt doorgegeven aan `auto-pr.ps1` voor de PR-titel
 
 ### 2. **quick-commit.ps1** (PowerShell - Snel Committen)
 Voor snelle commits en pushes.
@@ -57,9 +58,9 @@ git-flow.bat sync
 ### Nieuwe Feature Ontwikkelen
 1. Maak nieuwe branch: `.\git-helper.ps1` → Optie 2
 2. Ontwikkel je feature
-3. Commit changes: `.\quick-commit.ps1 "feat: beschrijving"`
-4. Push naar remote: Script vraagt automatisch
-5. Maak Pull Request via gegenereerde link
+3. Commit changes via menu: kies commit type (bijv. 1=💥 major, 2=feat, 3=fix) en voer bericht in
+4. Bij keuze voor release notes en PR: `git-helper.ps1` roept `auto-pr.ps1 -Type <gekozen-type>` aan → PR titel wordt bv. `💥 major: ...`
+5. Push naar remote en rond PR af
 
 ### Dagelijks Werk
 ```powershell
