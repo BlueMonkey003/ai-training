@@ -107,22 +107,40 @@ try {
     elseif ($Type -eq "chore") { $bumpType = "patch" }
     
     if ($bumpType -eq "auto") {
-        # Try branch name first
-        if ($BranchName) {
-            $bumpType = Get-ChangeTypeFromBranch -branch $BranchName
-            if ($bumpType) {
-                Write-Host "[Detected] '$bumpType' from branch: $BranchName" -ForegroundColor Yellow
-            }
-        }
-        
-        # If no branch name or no match, try commit message
-        if (-not $bumpType -and $CommitMessage) {
+        # Prefer commit message over branch (so 'major' via commit wint altijd)
+        if ($CommitMessage) {
             $bumpType = Get-ChangeTypeFromCommit -message $CommitMessage
             if ($bumpType) {
                 Write-Host "[Detected] '$bumpType' from commit: $CommitMessage" -ForegroundColor Yellow
             }
         }
-        
+
+        # If no commit match, try branch name
+        if (-not $bumpType -and $BranchName) {
+            $bumpType = Get-ChangeTypeFromBranch -branch $BranchName
+            if ($bumpType) {
+                Write-Host "[Detected] '$bumpType' from branch: $BranchName" -ForegroundColor Yellow
+            }
+        }
+
+        # If still nothing, scan recent commit subjects (fallback for CI environments)
+        if (-not $bumpType) {
+            try {
+                $subjects = git log -n 10 --pretty=format:"%s" 2>$null
+                $detected = $null
+                foreach ($s in $subjects) {
+                    $t = Get-ChangeTypeFromCommit -message $s
+                    if ($t -eq 'major') { $detected = 'major'; break }
+                    elseif (-not $detected -and $t) { $detected = $t }
+                }
+                if ($detected) {
+                    $bumpType = $detected
+                    Write-Host "[Detected] '$bumpType' from recent commits" -ForegroundColor Yellow
+                }
+            }
+            catch {}
+        }
+
         # Default to patch if nothing detected
         if (-not $bumpType) {
             $bumpType = "patch"

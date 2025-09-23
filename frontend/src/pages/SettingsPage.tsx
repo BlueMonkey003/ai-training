@@ -23,8 +23,9 @@ export default function SettingsPage() {
                 }
                 if (Array.isArray(response.data.recentCommits)) {
                     const items = response.data.recentCommits as { message: string; date: string }[];
-                    const lastThreeNewestFirst = items.slice(-3).reverse();
-                    setRecentCommits(lastThreeNewestFirst);
+                    // version.json staat al in volgorde nieuwste → oudste; toon de eerste 5
+                    const latestFive = items.slice(0, 5);
+                    setRecentCommits(latestFive);
                 }
             })
             .catch(() => {
