@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import type { User, Notification } from '../../../shared/types';
 import { authApi, notificationApi } from '../services/api';
 import socketService from '../services/socket';
@@ -33,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const navigate = useNavigate();
 
     useEffect(() => {
         let mounted = true;
@@ -64,20 +66,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
     }, []);
 
-    // Effect voor   notification  listener
+    // Effect voor notification listener
     useEffect(() => {
         if (user) {
             const handleNewNotification = (notification: Notification) => {
-                toast(`🔔 ${notification.message}`, {
-                    duration: 5000,
-                });
+                const route = (notification as any).route as string | undefined;
+                if (route) {
+                    toast.custom((t) => (
+                        <div
+                            className="cursor-pointer px-4 py-3 bg-white shadow rounded flex items-start gap-3 border"
+                            onClick={() => { navigate(route); toast.dismiss(t.id); }}
+                        >
+                            <span className="text-xl">🔔</span>
+                            <div className="text-sm">
+                                <div className="font-medium">Nieuwe notificatie</div>
+                                <div className="text-gray-700">{notification.message}</div>
+                                <div className="text-blue-600 underline mt-1">Openen</div>
+                            </div>
+                        </div>
+                    ), { duration: 6000 });
+                } else {
+                    toast(`🔔 ${notification.message}`, { duration: 5000 });
+                }
                 setUnreadNotifications(prev => prev + 1);
             };
 
             socketService.onNotification(handleNewNotification);
 
             return () => {
-                socketService.removeAllListeners();
+                socketService.offNotification(handleNewNotification);
             };
         }
     }, [user]);

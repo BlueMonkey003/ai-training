@@ -59,6 +59,10 @@ class SocketService {
         this.socket?.on('notification:new', callback);
     }
 
+    offNotification(callback: (notification: Notification) => void) {
+        this.socket?.off('notification:new', callback);
+    }
+
     removeAllListeners() {
         this.socket?.removeAllListeners();
     }

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AuthResponse, User, Restaurant, Order, OrderItem, Notification } from '../../../shared/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:10000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:10000';
 
 const api = axios.create({
     baseURL: `${API_URL}/api`,
@@ -151,6 +151,34 @@ export const orderApi = {
 
     deleteItem: async (orderId: string, itemId: string) => {
         const response = await api.delete<{ success: boolean }>(`/orders/${orderId}/items/${itemId}`);
+        return response.data;
+    },
+};
+
+// Receipts endpoints (admin)
+export const receiptApi = {
+    uploadForOrder: async (orderId: string, file: File) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        const response = await api.post<{ success: boolean; receipt: any }>(`/orders/${orderId}/receipts`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+    list: async (params?: { from?: string; to?: string; restaurantId?: string; userId?: string; orderId?: string; page?: number; pageSize?: number; includeTotals?: boolean }) => {
+        const response = await api.get<{ success: boolean; receipts: any[]; total: number }>(`/receipts`, { params });
+        return response.data;
+    },
+    summary: async (params?: { from?: string; to?: string }) => {
+        const response = await api.get<{ success: boolean; summary: any }>(`/receipts/summary`, { params });
+        return response.data;
+    },
+    getById: async (id: string) => {
+        const response = await api.get<{ success: boolean; receipt: any }>(`/receipts/${id}`);
+        return response.data;
+    },
+    delete: async (id: string) => {
+        const response = await api.delete<{ success: boolean }>(`/receipts/${id}`);
         return response.data;
     },
 };

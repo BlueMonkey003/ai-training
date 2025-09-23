@@ -6,9 +6,11 @@ import type { Notification } from '../../../shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { BellOff, Check, CheckCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export default function NotificationsPage() {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [markingRead, setMarkingRead] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function NotificationsPage() {
         socketService.onNotification(handleNewNotification);
 
         return () => {
-            socketService.removeAllListeners();
+            socketService.offNotification(handleNewNotification);
         };
     }, []);
 
@@ -76,6 +78,8 @@ export default function NotificationsPage() {
                 return '🔒';
             case 'new_item':
                 return '🛒';
+            case 'receipt_uploaded':
+                return '🧾';
             default:
                 return '🔔';
         }
@@ -89,6 +93,8 @@ export default function NotificationsPage() {
                 return 'Bestelling Gesloten';
             case 'new_item':
                 return 'Nieuw Item';
+            case 'receipt_uploaded':
+                return 'Bonnetje geüpload';
             default:
                 return 'Notificatie';
         }
@@ -134,6 +140,24 @@ export default function NotificationsPage() {
                         <Card
                             key={notification._id}
                             className={notification.read ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'}
+                            onClick={() => {
+                                if ((notification as any).route) {
+                                    navigate((notification as any).route);
+                                } else {
+                                    // fallback per type
+                                    switch (notification.type) {
+                                        case 'order_reminder':
+                                        case 'order_closed':
+                                            return; // zonder route geen directe navigatie
+                                        case 'receipt_uploaded':
+                                            navigate('/receipts');
+                                            break;
+                                        default:
+                                            return;
+                                    }
+                                }
+                            }}
+                            style={{ cursor: 'pointer' }}
                         >
                             <CardHeader className="pb-3">
                                 <div className="flex justify-between items-start">
@@ -156,7 +180,7 @@ export default function NotificationsPage() {
                                         <Button
                                             size="sm"
                                             variant="ghost"
-                                            onClick={() => handleMarkAsRead(notification._id)}
+                                            onClick={(e) => { e.stopPropagation(); handleMarkAsRead(notification._id); }}
                                             disabled={markingRead === notification._id}
                                         >
                                             {markingRead === notification._id ? (

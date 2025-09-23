@@ -2,9 +2,13 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
     userId: mongoose.Types.ObjectId;
-    type: 'order_reminder' | 'order_closed' | 'new_item';
+    type: 'order_reminder' | 'order_closed' | 'new_item' | 'receipt_uploaded';
     message: string;
     read: boolean;
+    orderId?: mongoose.Types.ObjectId;
+    restaurantId?: mongoose.Types.ObjectId;
+    receiptId?: mongoose.Types.ObjectId;
+    route?: string;
     createdAt: Date;
 }
 
@@ -17,7 +21,7 @@ const notificationSchema = new Schema<INotification>(
         },
         type: {
             type: String,
-            enum: ['order_reminder', 'order_closed', 'new_item'],
+            enum: ['order_reminder', 'order_closed', 'new_item', 'receipt_uploaded'],
             required: [true, 'Notificatie type is verplicht'],
         },
         message: {
@@ -27,6 +31,25 @@ const notificationSchema = new Schema<INotification>(
         read: {
             type: Boolean,
             default: false,
+        },
+        orderId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Order',
+            default: null,
+        },
+        restaurantId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Restaurant',
+            default: null,
+        },
+        receiptId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Receipt',
+            default: null,
+        },
+        route: {
+            type: String,
+            default: null,
         },
     },
     {

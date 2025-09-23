@@ -107,6 +107,25 @@ export default function SettingsPage() {
                             </CardHeader>
                         </Card>
                     </Link>
+
+                    <Link to="/receipts">
+                        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <Shield className="h-5 w-5 text-gray-600" />
+                                        <div>
+                                            <CardTitle className="text-base">Bonnetjes</CardTitle>
+                                            <CardDescription className="text-sm">
+                                                Beheer en analyseer geüploade bonnetjes
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                                </div>
+                            </CardHeader>
+                        </Card>
+                    </Link>
                 </div>
             )}
 

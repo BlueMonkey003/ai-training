@@ -59,6 +59,21 @@ export const uploadRestaurant = multer({
     },
 });
 
+export const uploadReceipt = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB max
+    },
+    fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+        const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+        if (allowedFormats.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file format. Only PDF, JPG, JPEG, PNG and WEBP are allowed.'));
+        }
+    },
+});
+
 // Helper function to upload to Cloudinary
 export const uploadToCloudinary = async (
     file: Express.Multer.File,
@@ -70,9 +85,10 @@ export const uploadToCloudinary = async (
     }
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
+        const isPdf = file.mimetype?.includes('pdf');
         const uploadOptions: any = {
             folder: folder,
-            resource_type: 'image',
+            resource_type: isPdf ? 'raw' : 'image',
             public_id: `${path.parse(file.originalname).name}_${Date.now()}`,
         };
 

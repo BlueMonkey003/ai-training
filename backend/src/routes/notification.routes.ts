@@ -21,11 +21,19 @@ const router = Router();
  *           type: string
  *         type:
  *           type: string
- *           enum: [order_reminder, order_closed, new_item]
+ *           enum: [order_reminder, order_closed, new_item, receipt_uploaded]
  *         message:
  *           type: string
  *         read:
  *           type: boolean
+ *         orderId:
+ *           type: string
+ *         restaurantId:
+ *           type: string
+ *         receiptId:
+ *           type: string
+ *         route:
+ *           type: string
  *         createdAt:
  *           type: string
  *           format: date-time

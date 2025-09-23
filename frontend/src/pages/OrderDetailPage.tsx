@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { orderApi } from '../services/api';
+import { orderApi, receiptApi } from '../services/api';
 import type { Order, OrderItem, Restaurant, User } from '../../../shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -166,6 +166,7 @@ export default function OrderDetailPage() {
 
     const restaurant = order.restaurantId as Restaurant;
     const canAddItem = order.status === 'open' && !showForm;
+    const isClosedAndAdmin = order.status === 'closed' && isAdmin;
 
     return (
         <div className="space-y-6">
@@ -176,18 +177,18 @@ export default function OrderDetailPage() {
                         <div className="flex-1">
                             <CardTitle className="text-xl sm:text-2xl">{restaurant.name}</CardTitle>
                             <CardDescription>
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-2">
-                                    <div className="flex items-center space-x-1">
+                                <span className="inline-flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-2">
+                                    <span className="inline-flex items-center space-x-1">
                                         <Clock className="h-4 w-4" />
                                         <span className="text-sm">{new Date(order.createdAt).toLocaleString('nl-NL')}</span>
-                                    </div>
+                                    </span>
                                     <span className="hidden sm:inline">-</span>
                                     <span className="text-sm">
                                         Status: <span className={order.status === 'open' ? 'text-green-600' : 'text-red-600'}>
                                             {order.status === 'open' ? 'Open' : 'Gesloten'}
                                         </span>
                                     </span>
-                                </div>
+                                </span>
                             </CardDescription>
                         </div>
                         {isAdmin && order.status === 'open' && (
@@ -225,6 +226,30 @@ export default function OrderDetailPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Upload bonnetje (admin, bij gesloten order) */}
+            {isClosedAndAdmin && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Bonnetje uploaden</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <Input type="file" accept=".pdf,image/*" onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file || !id) return;
+                                try {
+                                    await receiptApi.uploadForOrder(id, file);
+                                    toast.success('Bonnetje geüpload');
+                                } catch {
+                                    toast.error('Upload mislukt');
+                                }
+                            }} />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">Toegestaan: PDF, JPG, PNG, WEBP (max 5MB)</p>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Bestel Form */}
             {(showForm || canAddItem) && (
@@ -281,7 +306,7 @@ export default function OrderDetailPage() {
                                     />
                                 </div>
 
-                                {!menu && (
+                                {(!menu || !(menu.categories?.length)) && (
                                     <div className="space-y-2">
                                         <Label htmlFor="price">Prijs (optioneel)</Label>
                                         <Input
