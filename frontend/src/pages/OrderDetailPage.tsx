@@ -22,6 +22,10 @@ export default function OrderDetailPage() {
     const [items, setItems] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [menu, setMenu] = useState<RestaurantMenu | null>(null);
+    // Keuzes voor varianten en add-ons
+    const [selectedVariantId, setSelectedVariantId] = useState<string>('');
+    const [selectedSingleOptions, setSelectedSingleOptions] = useState<Record<string, string>>({});
+    const [selectedMultiOptions, setSelectedMultiOptions] = useState<Record<string, string[]>>({});
 
     // Form state
     const [showForm, setShowForm] = useState(false);
@@ -89,16 +93,45 @@ export default function OrderDetailPage() {
         if (!id) return;
 
         try {
-            const data: any = {
-                itemName: formData.itemName,
-                notes: formData.notes || undefined,
-            };
-            if (formData.price) data.price = parseFloat(formData.price);
+            const data: any = {};
             if (menu && formData.itemName && formData.itemName.includes('::')) {
-                const itemId = formData.itemName.split('::')[1];
-                data.menuItemId = itemId;
-                delete data.price;
-                delete data.itemName;
+                const [catId, itemId] = formData.itemName.split('::');
+                const category = menu.categories.find(c => c.id === catId);
+                const item = category?.items.find(i => i.id === itemId);
+                if (!item) throw new Error('Menu item niet gevonden');
+
+                // Bereken totaal + formatteer naam/notes
+                let total = item.price;
+                let name = item.name;
+                const addons: string[] = [];
+                if (item.variants && selectedVariantId) {
+                    const v = item.variants.find(v => v.id === selectedVariantId);
+                    if (v) { total += v.priceDelta; name = `${name} (${v.name})`; }
+                }
+                for (const g of item.optionGroups || []) {
+                    if (g.type === 'single') {
+                        const optId = selectedSingleOptions[g.id];
+                        const opt = g.options.find(o => o.id === optId);
+                        if (opt) { total += opt.priceDelta; addons.push(opt.name); }
+                    } else {
+                        const list = selectedMultiOptions[g.id] || [];
+                        for (const optId of list) {
+                            const opt = g.options.find(o => o.id === optId);
+                            if (opt) { total += opt.priceDelta; addons.push(opt.name); }
+                        }
+                    }
+                }
+
+                data.itemName = name;
+                data.price = total;
+                const extraNotes = addons.join('\n');
+                data.notes = [formData.notes, extraNotes].filter(Boolean).join('\n') || undefined;
+                data.menuItemId = item.id;
+            } else {
+                // Vrije invoer (geen menu)
+                data.itemName = formData.itemName;
+                data.notes = formData.notes || undefined;
+                if (formData.price) data.price = parseFloat(formData.price);
             }
 
             if (editingItemId) {
@@ -151,6 +184,9 @@ export default function OrderDetailPage() {
         setFormData({ itemName: '', notes: '', price: '' });
         setEditingItemId(null);
         setShowForm(false);
+        setSelectedVariantId('');
+        setSelectedSingleOptions({});
+        setSelectedMultiOptions({});
     };
 
 
@@ -268,7 +304,7 @@ export default function OrderDetailPage() {
                                         <select
                                             className="w-full border rounded p-2"
                                             value={formData.itemName}
-                                            onChange={(e) => setFormData({ ...formData, itemName: e.target.value, price: '' })}
+                                            onChange={(e) => { setFormData({ ...formData, itemName: e.target.value, price: '' }); setSelectedVariantId(''); setSelectedSingleOptions({}); setSelectedMultiOptions({}); }}
                                             required
                                         >
                                             <option value="" disabled>Kies een item</option>
@@ -296,6 +332,109 @@ export default function OrderDetailPage() {
                                     </div>
                                 )}
 
+                                {/* Varianten en add-ons afhankelijk van gekozen item */}
+                                {(() => {
+                                    if (!formData.itemName) return null;
+                                    const [catId, itemId] = formData.itemName.split('::');
+                                    const category = menu?.categories.find(c => c.id === catId);
+                                    const item = category?.items.find(i => i.id === itemId);
+                                    if (!item) return null;
+
+                                    const toggleMulti = (groupId: string, optionId: string, maxSelect?: number) => {
+                                        setSelectedMultiOptions(prev => {
+                                            const existing = prev[groupId] || [];
+                                            const has = existing.includes(optionId);
+                                            let next = existing;
+                                            if (has) next = existing.filter(x => x !== optionId);
+                                            else next = maxSelect && existing.length >= maxSelect ? existing : [...existing, optionId];
+                                            return { ...prev, [groupId]: next };
+                                        });
+                                    };
+
+                                    // Live prijsberekening
+                                    let total = item.price;
+                                    if (item.variants && selectedVariantId) {
+                                        const v = item.variants.find(v => v.id === selectedVariantId);
+                                        if (v) total += v.priceDelta;
+                                    }
+                                    for (const g of item.optionGroups || []) {
+                                        if (g.type === 'single') {
+                                            const optId = selectedSingleOptions[g.id];
+                                            const opt = g.options.find(o => o.id === optId);
+                                            if (opt) total += opt.priceDelta;
+                                        } else {
+                                            const list = selectedMultiOptions[g.id] || [];
+                                            for (const optId of list) {
+                                                const opt = g.options.find(o => o.id === optId);
+                                                if (opt) total += opt.priceDelta;
+                                            }
+                                        }
+                                    }
+
+                                    return (
+                                        <div className="space-y-4">
+                                            {item.variants && item.variants.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <Label>Formaat</Label>
+                                                    <select
+                                                        className="w-full border rounded p-2"
+                                                        value={selectedVariantId}
+                                                        onChange={(e) => setSelectedVariantId(e.target.value)}
+                                                        required={true}
+                                                    >
+                                                        <option value="">Kies formaat</option>
+                                                        {item.variants.map(v => (
+                                                            <option key={v.id} value={v.id}>{v.name}{v.priceDelta > 0 ? ` (+€${v.priceDelta.toFixed(2)})` : ''}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {item.optionGroups && item.optionGroups.length > 0 && item.optionGroups
+                                                // Filter op gekozen variant indien appliesTo is gezet
+                                                .filter(g => !g.appliesTo || (selectedVariantId && g.appliesTo === selectedVariantId))
+                                                .map(g => (
+                                                    <div key={g.id} className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label>{g.name}</Label>
+                                                            {!g.required && <span className="text-xs text-muted-foreground">Optioneel</span>}
+                                                        </div>
+                                                        {g.type === 'single' ? (
+                                                            <select
+                                                                className="w-full border rounded p-2"
+                                                                value={selectedSingleOptions[g.id] || ''}
+                                                                onChange={(e) => setSelectedSingleOptions(prev => ({ ...prev, [g.id]: e.target.value }))}
+                                                            >
+                                                                <option value="">Geen keuze</option>
+                                                                {g.options.map(o => (
+                                                                    <option key={o.id} value={o.id}>{o.name}{o.priceDelta > 0 ? ` (+€${o.priceDelta.toFixed(2)})` : ''}</option>
+                                                                ))}
+                                                            </select>
+                                                        ) : (
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                {g.options.map(o => {
+                                                                    const selected = (selectedMultiOptions[g.id] || []).includes(o.id);
+                                                                    return (
+                                                                        <label key={o.id} className="flex items-center gap-2 border rounded p-2">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={selected}
+                                                                                onChange={() => toggleMulti(g.id, o.id, g.maxSelect)}
+                                                                            />
+                                                                            <span className="flex-1">{o.name}</span>
+                                                                            <span className="text-sm text-muted-foreground">{o.priceDelta > 0 ? `+€${o.priceDelta.toFixed(2)}` : '+€0,00'}</span>
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+
+                                            <div className="text-sm">Totaal: <strong>€{total.toFixed(2)}</strong></div>
+                                        </div>
+                                    );
+                                })()}
                                 <div className="space-y-2">
                                     <Label htmlFor="notes">Opmerkingen (optioneel)</Label>
                                     <Input
@@ -385,7 +524,15 @@ export default function OrderDetailPage() {
                                             <div className="mt-2">
                                                 <p className="font-medium">{item.itemName}</p>
                                                 {item.notes && (
-                                                    <p className="text-sm text-gray-600 mt-1">{item.notes}</p>
+                                                    item.notes.includes('\n') ? (
+                                                        <ul className="text-sm text-gray-600 mt-1 list-disc ml-5">
+                                                            {item.notes.split('\n').map((n, i) => (
+                                                                <li key={i}>{n}</li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-600 mt-1">{item.notes}</p>
+                                                    )
                                                 )}
                                                 {item.price && (
                                                     <p className="text-sm font-medium mt-1">€{item.price.toFixed(2)}</p>

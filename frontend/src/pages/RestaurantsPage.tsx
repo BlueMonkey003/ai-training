@@ -8,6 +8,100 @@ import { Label } from '../components/ui/label';
 import { Plus, Edit, Trash2, ExternalLink, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// Volledig XML template met uitleg (generiek, alles optioneel)
+const XML_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  UITLEG (belangrijk):
+  - Dit template werkt voor alle gevallen. Laat secties weg die je niet nodig hebt.
+  - Items zonder vervolgkeuzes: zet alleen id, name, price, description (optioneel).
+  - Varianten (bijv. 15cm/30cm): voeg <variants> toe; basisprijs = price, andere varianten met priceDelta.
+  - Extra's/keuzes:
+    * Per item: <optionGroups> binnen <item>
+    * Globaal: <extras> onderaan voor standaardgroepen bij alle items
+  - Weergavelogica:
+    * Als een sectie ontbreekt of leeg is, wordt er niets getoond in de UI.
+    * useGlobalExtras="false" op <category> of <item> verbergt globale extra's daar.
+    * Conflicten: heeft een item een optionGroup met hetzelfde id als een globale? Dan geldt het item (override).
+    * type: 'single' (dropdown) of 'multi' (checkboxen); 'maxSelect' alleen bij 'multi'.
+    * appliesTo: koppel een optionGroup aan een variant-id (bijv. '15cm' of '30cm'). Zonder appliesTo geldt de groep voor alle varianten.
+    * default="true" wordt NIET automatisch geselecteerd in de UI.
+-->
+<restaurant>
+  <info>
+    <name>JOUW RESTAURANT NAAM</name>
+    <website>https://voorbeeld.nl/</website>
+    <phone>000-0000000</phone>
+    <delivery_time>30-45 minuten</delivery_time>
+    <minimum_order>15.00</minimum_order>
+    <currency>EUR</currency>
+  </info>
+
+  <categories>
+    <category id="broodjes" name="Broodjes">
+      <items>
+        <!-- Simpel item (geen extra's) -->
+        <item id="gezond" name="Broodje gezond" price="6.95" description="Ham, kaas, sla, tomaat, komkommer, ei en mayo" />
+
+        <!-- Item met eigen keuzes (itemspecifiek OVERRIDET globaal bij gelijk id) -->
+        <item id="carpaccio" name="Broodje carpaccio" price="8.95" description="Rucola, zontomaat, pijnboompitten, parmezaan">
+          <optionGroups>
+            <optionGroup id="saus" name="Saus" type="single">
+              <option id="truffel" name="Truffelmayonaise" priceDelta="0.00"/>
+              <option id="pesto" name="Pesto" priceDelta="0.00"/>
+            </optionGroup>
+          </optionGroups>
+        </item>
+
+        <!-- Subway-achtig item met varianten (15/30 cm) en variant-specifieke extra's -->
+        <item id="italian_bmt" name="Italian B.M.T." price="8.50" description="Salami, pepperoni, ham">
+          <variants required="true">
+            <variant id="15cm" name="15 cm" priceDelta="0.00"/>
+            <variant id="30cm" name="30 cm (Footlong)" priceDelta="4.50"/>
+          </variants>
+          <optionGroups>
+            <optionGroup id="bread" name="Brood" type="single" required="true">
+              <option id="white" name="Wit" priceDelta="0.00"/>
+              <option id="wholegrain" name="Volkoren" priceDelta="0.00"/>
+            </optionGroup>
+            <optionGroup id="extras_30" name="Extra (30cm)" type="multi" maxSelect="5" appliesTo="30cm">
+              <option id="bacon_30" name="Bacon" priceDelta="2.50"/>
+              <option id="double_cheese_30" name="Dubbel Kaas" priceDelta="1.50"/>
+            </optionGroup>
+            <optionGroup id="extras_15" name="Extra (15cm)" type="multi" maxSelect="5" appliesTo="15cm">
+              <option id="bacon_15" name="Bacon" priceDelta="1.50"/>
+              <option id="double_cheese_15" name="Dubbel Kaas" priceDelta="0.75"/>
+            </optionGroup>
+          </optionGroups>
+        </item>
+      </items>
+    </category>
+
+    <!-- Categorie zonder globale extra's -->
+    <category id="dranken" name="Dranken" useGlobalExtras="false">
+      <items>
+        <item id="cola_33" name="Coca-Cola 33cl" price="2.50" description="Koud blikje 0,33l" />
+        <item id="fanta_33" name="Fanta Orange 33cl" price="2.50" />
+      </items>
+    </category>
+  </categories>
+
+  <!-- Globale extra's: verschijnen standaard bij ALLE items, behalve waar useGlobalExtras="false" is gezet. -->
+  <extras>
+    <optionGroup id="extra" name="Extra's" type="multi" maxSelect="5">
+      <option id="extra_kaas" name="Extra Kaas" priceDelta="0.75"/>
+      <option id="extra_vlees" name="Extra Vlees" priceDelta="1.50"/>
+      <option id="extra_groenten" name="Extra Groenten" priceDelta="0.50"/>
+      <option id="geen_ui" name="Geen Ui" priceDelta="0.00"/>
+      <option id="extra_pikant" name="Extra Pikant" priceDelta="0.00"/>
+    </optionGroup>
+
+    <optionGroup id="broodtype" name="Broodtype" type="single">
+      <option id="wit" name="Wit" priceDelta="0.00"/>
+      <option id="bruin" name="Bruin" priceDelta="0.00"/>
+    </optionGroup>
+  </extras>
+</restaurant>`;
+
 export default function RestaurantsPage() {
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
     const [loading, setLoading] = useState(true);
@@ -23,6 +117,18 @@ export default function RestaurantsPage() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [menuFile, setMenuFile] = useState<File | null>(null);
     const [menuJson, setMenuJson] = useState<string>('');
+
+    const downloadTemplate = () => {
+        const blob = new Blob([XML_TEMPLATE], { type: 'text/xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'menu-template.xml';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    };
 
     useEffect(() => {
         fetchRestaurants();
@@ -211,6 +317,11 @@ export default function RestaurantsPage() {
                                     accept=".xml,application/json"
                                     onChange={(e) => setMenuFile(e.target.files?.[0] || null)}
                                 />
+                                <div>
+                                    <Button type="button" variant="outline" size="sm" onClick={downloadTemplate}>
+                                        Voorbeeld XML downloaden
+                                    </Button>
+                                </div>
                                 <div className="text-sm text-gray-500">of plak JSON hieronder</div>
                                 <textarea
                                     className="w-full border rounded p-2 text-sm"

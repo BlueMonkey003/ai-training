@@ -164,6 +164,32 @@ router.delete('/:id', authenticate, requireAdmin, deleteRestaurant);
  *                                   type: string
  *                                 price:
  *                                   type: number
+ *                                 variants:
+ *                                   type: array
+ *                                   items:
+ *                                     type: object
+ *                                     properties:
+ *                                       id: { type: string }
+ *                                       name: { type: string }
+ *                                       priceDelta: { type: number }
+ *                                 optionGroups:
+ *                                   type: array
+ *                                   items:
+ *                                     type: object
+ *                                     properties:
+ *                                       id: { type: string }
+ *                                       name: { type: string }
+ *                                       type: { type: string, enum: [single, multi] }
+ *                                       required: { type: boolean }
+ *                                       maxSelect: { type: number }
+ *                                       options:
+ *                                         type: array
+ *                                         items:
+ *                                           type: object
+ *                                           properties:
+ *                                             id: { type: string }
+ *                                             name: { type: string }
+ *                                             priceDelta: { type: number }
  */
 router.get('/:id/menu', getRestaurantMenu);
 
