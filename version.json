@@ -4,24 +4,24 @@
   "buildNumber": 20,
   "recentCommits": [
     {
+      "date": "2025-09-26",
+      "message": "XML menu template te downloaden voor nieuwe restaurants"
+    },
+    {
+      "date": "2025-09-26",
+      "message": "XML menu generiek gemaakt"
+    },
+    {
+      "date": "2025-09-26",
+      "message": "Bestellingen kunnen uitgebreider door extra dropdowns"
+    },
+    {
       "date": "2025-09-23",
       "message": "bugfix"
     },
     {
       "date": "2025-09-23",
       "message": "Bonnetje uploaden na bestelling"
-    },
-    {
-      "date": "2025-09-23",
-      "message": "Alle statistieken inzien als admin van personen en restaurants"
-    },
-    {
-      "date": "2025-09-23",
-      "message": "Notificaties bugfixing"
-    },
-    {
-      "date": "2025-09-19",
-      "message": "Bestellen via dropdown met automatische prijzen wanneer menu aanwezig is"
     }
   ]
 }

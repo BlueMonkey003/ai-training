@@ -54,8 +54,17 @@ export const addOrderItem = async (
                 error.statusCode = 400;
                 throw error;
             }
-            finalName = found.name;
-            finalPrice = typeof found.price === 'number' ? found.price : undefined;
+            // Gebruik client-berekende naam/prijs als die zijn meegegeven; anders val terug op menu snapshot
+            const hasClientName = typeof itemName === 'string' && itemName.trim().length > 0;
+            const hasClientPrice = typeof price === 'number' && !Number.isNaN(price);
+
+            finalName = hasClientName ? itemName : found.name;
+            finalPrice = hasClientPrice ? price : (typeof found.price === 'number' ? found.price : undefined);
+
+            // Minimale validatie: prijs mag niet negatief zijn en niet onlogisch lager dan basisprijs
+            if (typeof found.price === 'number' && typeof finalPrice === 'number' && finalPrice < found.price) {
+                finalPrice = found.price;
+            }
         }
 
         // Maak nieuw item

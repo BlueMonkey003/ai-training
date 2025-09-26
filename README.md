@@ -9,6 +9,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - **Notificaties**: Lijst, markeer gelezen/alles-gelezen; realtime bell-counter en toast bij nieuwe notificaties. Admins ontvangen automatisch een notificatie bij uploaden van een bonnetje. Notificaties bevatten nu een route (bijv. `/orders/{id}` of `/receipts`) en zijn klikbaar.
 - **Uploads**: Profielfoto upload via `multipart/form-data` naar Cloudinary.
 - **Bonnetjes (admin)**: upload bon bij gesloten order; overzicht met downloads; dashboards (totaal, per restaurant, per persoon).
+- **Menu-varianten & add-ons**: Menukaarten ondersteunen varianten (bijv. 15/30 cm) en optiegroepen (single/multi) met prijsdelta's. Frontend toont automatisch dropdowns/checkboxes en rekent de prijs live uit. Import via XML/JSON.
 - **Versie-informatie**: Header toont `vX.Y.Z (build N)`; Over/Instellingen toont versie/build en de laatste wijzigingen.
 
 ## 🧱 Architectuur & stack
@@ -55,7 +56,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - Auth: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`
 - Users: `GET /users` (admin), `GET/PATCH /users/{id}`, `PATCH /users/{id}/role`, `PATCH /users/{id}/status`, `POST /users/{id}/reset-password`, `DELETE /users/{id}`
 - Restaurants: `GET /restaurants`; `POST/PATCH/DELETE /restaurants` (admin, met upload)
- - Restaurants: `GET /restaurants`; `POST/PATCH/DELETE /restaurants` (admin, met upload); Menu: `GET /restaurants/{id}/menu`, `POST /restaurants/{id}/menu/import` (XML/JSON of `multipart/form-data`, admin)
+- Restaurants Menu: `GET /restaurants/{id}/menu`, `POST /restaurants/{id}/menu/import` (XML/JSON of `multipart/form-data`, admin). Menu-items ondersteunen optioneel `variants` en `optionGroups` met `priceDelta` (zie voorbeeld hieronder).
 - Orders: `GET /orders` (filters: status/date), `POST /orders` (admin), `GET /orders/{id}`, `PATCH /orders/{id}` (close, admin)
 - Order items: `POST/PATCH/DELETE /orders/{id}/items`
 - Notifications: `GET /notifications?unread=bool`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`
@@ -81,8 +82,82 @@ Swagger is beschikbaar op `/api-docs`. Bij wijzigingen aan endpoints: altijd Swa
     ]
   }
   ```
-- `recentCommits` maximaal 5 items, nieuwste bovenaan. De app toont de laatste 3.
+- `recentCommits` maximaal 5 items, nieuwste bovenaan. De app toont standaard de laatste 3 (frontend kan tot 5 tonen).
 - Pipelines overschrijven `recentCommits` niet. Het Auto PR-script gebruikt deze bullets en werkt ze bij indien nodig.
+
+## 📄 Voorbeeld XML voor menu (met varianten en add-ons)
+```xml
+<restaurant>
+  <info>
+    <name>Subway</name>
+    <currency>EUR</currency>
+  </info>
+
+  <categories>
+    <category id="subs" name="Subs">
+      <items>
+        <item id="italian_bmt">
+          <name>Italian B.M.T.</name>
+          <price>5.50</price>
+          <description>Salami, pepperoni, ham</description>
+
+          <variants required="true">
+            <variant id="15cm" name="15 cm" priceDelta="0.00"/>
+            <variant id="30cm" name="30 cm" priceDelta="3.00"/>
+          </variants>
+
+          <optionGroups>
+            <optionGroup id="bread" name="Brood" type="single" required="false">
+              <option id="white" name="Wit" priceDelta="0.00"/>
+              <option id="wholegrain" name="Volkoren" priceDelta="0.00"/>
+            </optionGroup>
+
+            <optionGroup id="cheese" name="Kaas" type="single" required="false">
+              <option id="cheddar" name="Cheddar" priceDelta="0.50"/>
+              <option id="mozzarella" name="Mozzarella" priceDelta="0.50"/>
+            </optionGroup>
+
+            <optionGroup id="extras" name="Extra's" type="multi" maxSelect="3">
+              <option id="extra_meat" name="Extra vlees" priceDelta="1.50"/>
+              <option id="extra_cheese" name="Dubbel kaas" priceDelta="0.50"/>
+              <option id="guacamole" name="Guacamole" priceDelta="1.00"/>
+            </optionGroup>
+
+            <optionGroup id="sauces" name="Sauzen" type="multi" maxSelect="3">
+              <option id="mayo" name="Mayonaise" priceDelta="0.00"/>
+              <option id="bbq" name="BBQ" priceDelta="0.00"/>
+            </optionGroup>
+          </optionGroups>
+        </item>
+
+        <item id="veggie_delite">
+          <name>Veggie Delite</name>
+          <price>4.90</price>
+          <variants required="false">
+            <variant id="15cm" name="15 cm" priceDelta="0.00"/>
+            <variant id="30cm" name="30 cm" priceDelta="2.50"/>
+          </variants>
+          <optionGroups>
+            <optionGroup id="extras" name="Extra's" type="multi" maxSelect="2">
+              <option id="extra_cheese" name="Extra kaas" priceDelta="0.50"/>
+              <option id="avocado" name="Avocado" priceDelta="1.00"/>
+            </optionGroup>
+          </optionGroups>
+        </item>
+      </items>
+    </category>
+
+    <category id="drinks" name="Drinken">
+      <items>
+        <item id="cola_33cl">
+          <name>Coca-Cola 33cl</name>
+          <price>2.50</price>
+        </item>
+      </items>
+    </category>
+  </categories>
+</restaurant>
+```
 
 ## 📱 Mobielvriendelijk
 - Layouts zijn responsive voor laptop en telefoon. Release notes-tekst wordt niet afgekapt (break-words) en blijft volledig leesbaar.

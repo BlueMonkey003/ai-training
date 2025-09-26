@@ -14,6 +14,16 @@ export interface IRestaurant extends Document {
                 name: string;
                 description?: string;
                 price: number;
+                variants?: Array<{ id: string; name: string; priceDelta: number }>;
+                optionGroups?: Array<{
+                    id: string;
+                    name: string;
+                    type: 'single' | 'multi';
+                    required?: boolean;
+                    maxSelect?: number;
+                    appliesTo?: string;
+                    options: Array<{ id: string; name: string; priceDelta: number; default?: boolean }>;
+                }>;
             }>;
         }>;
         currency?: string;
@@ -55,6 +65,31 @@ const restaurantSchema = new Schema<IRestaurant>(
                             name: { type: String, required: true, trim: true },
                             description: { type: String, default: null },
                             price: { type: Number, required: true, min: 0 },
+                            variants: [
+                                {
+                                    id: { type: String, required: true, trim: true },
+                                    name: { type: String, required: true, trim: true },
+                                    priceDelta: { type: Number, required: true, min: 0 },
+                                },
+                            ],
+                            optionGroups: [
+                                {
+                                    id: { type: String, required: true, trim: true },
+                                    name: { type: String, required: true, trim: true },
+                                    type: { type: String, enum: ['single', 'multi'], required: true },
+                                    required: { type: Boolean, default: false },
+                                    maxSelect: { type: Number, min: 1, default: null },
+                                    appliesTo: { type: String, default: null },
+                                    options: [
+                                        {
+                                            id: { type: String, required: true, trim: true },
+                                            name: { type: String, required: true, trim: true },
+                                            priceDelta: { type: Number, required: true, min: 0 },
+                                            default: { type: Boolean, default: false },
+                                        },
+                                    ],
+                                },
+                            ],
                         },
                     ],
                 },

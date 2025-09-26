@@ -47,6 +47,27 @@ export interface RestaurantMenuItem {
     name: string;
     description?: string;
     price: number;
+    // Optioneel: varianten (bijv. 15cm/30cm) die een prijsdelta toevoegen
+    variants?: Array<{
+        id: string;
+        name: string;
+        priceDelta: number;
+    }>;
+    // Optioneel: optiegroepen (single/multi) met opties die een prijsdelta kunnen toevoegen
+    optionGroups?: Array<{
+        id: string;
+        name: string;
+        type: 'single' | 'multi';
+        required?: boolean;
+        maxSelect?: number;
+        appliesTo?: string;
+        options: Array<{
+            id: string;
+            name: string;
+            priceDelta: number;
+            default?: boolean;
+        }>;
+    }>;
 }
 
 export interface RestaurantMenuCategory {
