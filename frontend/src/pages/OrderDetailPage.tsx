@@ -674,7 +674,7 @@ export default function OrderDetailPage() {
                                                                     <span>{item.variants?.find(v => v.id === selectedVariantId)?.priceDelta ? `+€${item.variants.find(v => v.id === selectedVariantId)!.priceDelta.toFixed(2)}` : ''}</span>
                                                                 </div>
                                                             )}
-                                                            {bonData.groups.map((group, i) => (
+                                                            {bonData?.groups.map((group, i) => (
                                                                 <div key={i} className="text-xs mb-2">
                                                                     <div className="font-medium text-gray-700 mb-0.5">{group.groupName}:</div>
                                                                     {group.items.map((item, j) => (
@@ -706,7 +706,7 @@ export default function OrderDetailPage() {
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex-1">
                                                             <div className="font-medium text-sm">{item.name}{variantName && ` (${variantName})`}</div>
-                                                            {bonData.groups.length > 0 && (
+                                                            {bonData?.groups && bonData.groups.length > 0 && (
                                                                 <div className="text-xs text-gray-500">+{bonData.groups.reduce((sum, g) => sum + g.items.length, 0)} keuze(s) · Tik voor details</div>
                                                             )}
                                                         </div>
