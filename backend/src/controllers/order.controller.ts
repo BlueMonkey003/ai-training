@@ -25,7 +25,7 @@ export const getOrders = async (
         }
 
         const orders = await Order.find(filter)
-            .populate('restaurantId')
+            .populate({ path: 'restaurantId', select: 'name imageUrl websiteUrl menuUrl' })
             .populate('createdBy', 'name email')
             .sort('-date');
 
@@ -115,7 +115,7 @@ export const getOrderById = async (
         const { id } = req.params;
 
         const order = await Order.findById(id)
-            .populate('restaurantId')
+            .populate({ path: 'restaurantId', select: 'name imageUrl websiteUrl menuUrl' })
             .populate('createdBy', 'name email');
 
         if (!order) {

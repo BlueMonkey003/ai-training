@@ -200,7 +200,11 @@ export default function OrderDetailPage() {
         return <div>Order niet gevonden</div>;
     }
 
-    const restaurant = order.restaurantId as Restaurant;
+    const restaurantObj = (order.restaurantId as Restaurant) || ({} as Restaurant);
+    const restaurantName = (restaurantObj as any).name || 'Onbekend restaurant';
+    const restaurantImage = (restaurantObj as any).imageUrl || '';
+    const restaurantWebsite = (restaurantObj as any).websiteUrl || '';
+    const restaurantMenuUrl = (restaurantObj as any).menuUrl || '';
     const canAddItem = order.status === 'open' && !showForm;
     const isClosedAndAdmin = order.status === 'closed' && isAdmin;
 
@@ -211,7 +215,7 @@ export default function OrderDetailPage() {
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                         <div className="flex-1">
-                            <CardTitle className="text-xl sm:text-2xl">{restaurant.name}</CardTitle>
+                            <CardTitle className="text-xl sm:text-2xl">{restaurantName}</CardTitle>
                             <CardDescription>
                                 <span className="inline-flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-2">
                                     <span className="inline-flex items-center space-x-1">
@@ -235,23 +239,27 @@ export default function OrderDetailPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <img
-                        src={restaurant.imageUrl}
-                        alt={restaurant.name}
-                        className="w-full h-64 object-cover rounded-lg"
-                    />
+                    {restaurantImage && (
+                        <img
+                            src={restaurantImage}
+                            alt={restaurantName}
+                            className="w-full h-64 object-cover rounded-lg"
+                        />
+                    )}
                     <div className="mt-4 flex space-x-4">
-                        <a
-                            href={restaurant.websiteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                        >
-                            Website →
-                        </a>
-                        {restaurant.menuUrl && (
+                        {restaurantWebsite && (
                             <a
-                                href={restaurant.menuUrl}
+                                href={restaurantWebsite}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800"
+                            >
+                                Website →
+                            </a>
+                        )}
+                        {restaurantMenuUrl && (
+                            <a
+                                href={restaurantMenuUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:text-blue-800"
