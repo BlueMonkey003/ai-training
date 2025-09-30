@@ -496,8 +496,11 @@ export default function OrderDetailPage() {
                 <CardContent>
                     <div className="space-y-3">
                         {items.map((item) => {
-                            const itemUser = item.userId as User;
-                            const isOwner = itemUser._id === user?._id;
+                            const itemUserObj = (item.userId as User) || ({} as User);
+                            const itemUserName = (itemUserObj && (itemUserObj as any).name) ? itemUserObj.name : 'Onbekende gebruiker';
+                            const itemUserImage = (itemUserObj && (itemUserObj as any).profileImageUrl) ? itemUserObj.profileImageUrl : '';
+                            const itemUserId = (itemUserObj && (itemUserObj as any)._id) ? (itemUserObj as any)._id : null;
+                            const isOwner = itemUserId && user?._id ? (itemUserId === user?._id) : false;
 
                             return (
                                 <div
@@ -507,18 +510,18 @@ export default function OrderDetailPage() {
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-2">
-                                                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-medium">
-                                                    {itemUser.profileImageUrl ? (
+                                                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-medium overflow-hidden">
+                                                    {itemUserImage ? (
                                                         <img
-                                                            src={itemUser.profileImageUrl}
-                                                            alt={itemUser.name}
+                                                            src={itemUserImage}
+                                                            alt={itemUserName}
                                                             className="w-8 h-8 rounded-full object-cover"
                                                         />
                                                     ) : (
-                                                        itemUser.name.charAt(0).toUpperCase()
+                                                        <span>{itemUserName.charAt(0).toUpperCase()}</span>
                                                     )}
                                                 </div>
-                                                <span className="font-medium">{itemUser.name}</span>
+                                                <span className="font-medium">{itemUserName}</span>
                                             </div>
 
                                             <div className="mt-2">
