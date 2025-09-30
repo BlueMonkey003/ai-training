@@ -91,7 +91,7 @@ export default function DashboardPage() {
                             <div>
                                 <CardTitle className="text-green-800">Actieve Lunchbestelling</CardTitle>
                                 <CardDescription className="text-green-600">
-                                    Bestelling is open voor {(activeOrder.restaurantId as Restaurant).name}
+                                    Bestelling is open voor {((activeOrder.restaurantId as Restaurant) && (activeOrder.restaurantId as any).name) ? (activeOrder.restaurantId as any).name : 'Onbekend restaurant'}
                                 </CardDescription>
                             </div>
                             <Link to={`/orders/${activeOrder._id}`}>
@@ -101,32 +101,36 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="grid md:grid-cols-2 gap-4">
-                            <img
-                                src={(activeOrder.restaurantId as Restaurant).imageUrl}
-                                alt={(activeOrder.restaurantId as Restaurant).name}
-                                className="w-full h-48 object-cover rounded-lg"
-                            />
+                            {((activeOrder.restaurantId as any)?.imageUrl) && (
+                                <img
+                                    src={(activeOrder.restaurantId as any).imageUrl}
+                                    alt={((activeOrder.restaurantId as any).name) || 'Restaurant'}
+                                    className="w-full h-48 object-cover rounded-lg"
+                                />
+                            )}
                             <div className="space-y-3">
                                 <h3 className="font-semibold text-lg">
-                                    {(activeOrder.restaurantId as Restaurant).name}
+                                    {((activeOrder.restaurantId as any)?.name) || 'Onbekend restaurant'}
                                 </h3>
                                 <div className="flex items-center space-x-2 text-gray-600">
                                     <Clock className="h-4 w-4" />
                                     <span>Geopend op {new Date(activeOrder.createdAt).toLocaleString('nl-NL')}</span>
                                 </div>
                                 <div className="flex space-x-2">
-                                    <a
-                                        href={(activeOrder.restaurantId as Restaurant).websiteUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                                    >
-                                        <ExternalLink className="h-4 w-4 mr-1" />
-                                        Website
-                                    </a>
-                                    {(activeOrder.restaurantId as Restaurant).menuUrl && (
+                                    {((activeOrder.restaurantId as any)?.websiteUrl) && (
                                         <a
-                                            href={(activeOrder.restaurantId as Restaurant).menuUrl}
+                                            href={(activeOrder.restaurantId as any).websiteUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                                        >
+                                            <ExternalLink className="h-4 w-4 mr-1" />
+                                            Website
+                                        </a>
+                                    )}
+                                    {((activeOrder.restaurantId as any)?.menuUrl) && (
+                                        <a
+                                            href={(activeOrder.restaurantId as any).menuUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center text-blue-600 hover:text-blue-800"
@@ -190,7 +194,7 @@ export default function DashboardPage() {
                         <Card key={order._id}>
                             <CardHeader>
                                 <CardTitle className="text-lg">
-                                    {(order.restaurantId as Restaurant).name}
+                                    {((order.restaurantId as any)?.name) || 'Onbekend restaurant'}
                                 </CardTitle>
                                 <CardDescription>
                                     {new Date(order.date).toLocaleDateString('nl-NL')}
