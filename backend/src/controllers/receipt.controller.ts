@@ -123,9 +123,6 @@ export const listReceipts = async (req: AuthRequest, res: Response, next: NextFu
 
         const pipeline: any[] = [
             { $match: aggMatch },
-            { $sort: { createdAt: -1 } },
-            { $skip: skip },
-            { $limit: parseInt(pageSize) },
             {
                 $lookup: { from: 'orderitems', localField: 'orderId', foreignField: 'orderId', as: 'orderItems' },
             },
@@ -136,6 +133,11 @@ export const listReceipts = async (req: AuthRequest, res: Response, next: NextFu
                     participantTotal: participantObjectId ? { $sum: { $map: { input: '$orderItems', as: 'oi', in: { $cond: [{ $eq: ['$$oi.userId', participantObjectId] }, { $ifNull: ['$$oi.price', 0] }, 0] } } } } : undefined,
                 },
             },
+            // Filter op participantId: alleen receipts waar deze user een item heeft
+            ...(participantObjectId ? [{ $match: { participantIds: participantObjectId } }] : []),
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: parseInt(pageSize) },
             { $lookup: { from: 'restaurants', localField: 'restaurantId', foreignField: '_id', as: 'restaurant' } },
             { $unwind: { path: '$restaurant', preserveNullAndEmptyArrays: true } },
             { $lookup: { from: 'users', localField: 'uploadedBy', foreignField: '_id', as: 'u' } },

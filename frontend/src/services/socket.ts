@@ -51,8 +51,16 @@ class SocketService {
         this.socket?.on('order:update', callback);
     }
 
+    offOrderUpdate(callback: (data: { type: string; item?: OrderItem; itemId?: string }) => void) {
+        this.socket?.off('order:update', callback);
+    }
+
     onOrderClosed(callback: (order: Order) => void) {
         this.socket?.on('order:closed', callback);
+    }
+
+    offOrderClosed(callback: (order: Order) => void) {
+        this.socket?.off('order:closed', callback);
     }
 
     onNotification(callback: (notification: Notification) => void) {
