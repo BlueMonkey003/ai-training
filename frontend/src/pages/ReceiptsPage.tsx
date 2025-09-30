@@ -223,9 +223,15 @@ export default function ReceiptsPage() {
                                                 <td className="py-2">{r.restaurant?.name || (r.restaurantId as any)?.name || '-'}</td>
                                                 <td className="py-2">
                                                     <div className="flex -space-x-2 flex-wrap gap-1">
-                                                        {(r.participants || []).map((p: any) => (
-                                                            <img key={p._id} title={p.name || p.email} src={p.profileImageUrl || ''} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
-                                                        ))}
+                                                        {(r.participants || []).map((p: any) =>
+                                                            p.profileImageUrl ? (
+                                                                <img key={p._id} title={p.name || p.email} src={p.profileImageUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
+                                                            ) : (
+                                                                <div key={p._id} title={p.name || p.email} className="w-6 h-6 rounded-full bg-gray-400 border text-white text-xs flex items-center justify-center">
+                                                                    {(p.name || p.email || '?').charAt(0).toUpperCase()}
+                                                                </div>
+                                                            )
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="py-2">{typeof r.orderTotal === 'number' ? `€ ${r.orderTotal.toFixed(2)}` : '-'}</td>
@@ -243,9 +249,15 @@ export default function ReceiptsPage() {
                                         <div className="text-sm text-gray-600">{new Date(r.createdAt).toLocaleDateString('nl-NL')}</div>
                                         <div className="font-medium">{r.restaurant?.name || (r.restaurantId as any)?.name || '-'}</div>
                                         <div className="mt-2 flex -space-x-2 flex-wrap gap-1">
-                                            {(r.participants || []).map((p: any) => (
-                                                <img key={p._id} title={p.name || p.email} src={p.profileImageUrl || ''} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
-                                            ))}
+                                            {(r.participants || []).map((p: any) =>
+                                                p.profileImageUrl ? (
+                                                    <img key={p._id} title={p.name || p.email} src={p.profileImageUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
+                                                ) : (
+                                                    <div key={p._id} title={p.name || p.email} className="w-6 h-6 rounded-full bg-gray-400 border text-white text-xs flex items-center justify-center">
+                                                        {(p.name || p.email || '?').charAt(0).toUpperCase()}
+                                                    </div>
+                                                )
+                                            )}
                                         </div>
                                         <div className="mt-1 text-sm">Totaal: {typeof r.orderTotal === 'number' ? `€ ${r.orderTotal.toFixed(2)}` : '-'}</div>
                                         <div className="mt-1 text-sm">Beoordeling: {typeof r.rating === 'number' ? `${r.rating}/5` : '-'}</div>
@@ -287,9 +299,15 @@ export default function ReceiptsPage() {
                                                 <td className="py-2">{r.restaurant?.name || (r.restaurantId as any)?.name || '-'}</td>
                                                 <td className="py-2">
                                                     <div className="flex -space-x-2 flex-wrap gap-1">
-                                                        {(r.participants || []).map((p: any) => (
-                                                            <img key={p._id} title={p.name || p.email} src={p.profileImageUrl || ''} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
-                                                        ))}
+                                                        {(r.participants || []).map((p: any) =>
+                                                            p.profileImageUrl ? (
+                                                                <img key={p._id} title={p.name || p.email} src={p.profileImageUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
+                                                            ) : (
+                                                                <div key={p._id} title={p.name || p.email} className="w-6 h-6 rounded-full bg-gray-400 border text-white text-xs flex items-center justify-center">
+                                                                    {(p.name || p.email || '?').charAt(0).toUpperCase()}
+                                                                </div>
+                                                            )
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="py-2">{typeof r.participantTotal === 'number' ? `€ ${r.participantTotal.toFixed(2)}` : '-'}</td>
@@ -307,9 +325,15 @@ export default function ReceiptsPage() {
                                         <div className="text-sm text-gray-600">{new Date(r.createdAt).toLocaleDateString('nl-NL')}</div>
                                         <div className="font-medium">{r.restaurant?.name || (r.restaurantId as any)?.name || '-'}</div>
                                         <div className="mt-2 flex -space-x-2 flex-wrap gap-1">
-                                            {(r.participants || []).map((p: any) => (
-                                                <img key={p._id} title={p.name || p.email} src={p.profileImageUrl || ''} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
-                                            ))}
+                                            {(r.participants || []).map((p: any) =>
+                                                p.profileImageUrl ? (
+                                                    <img key={p._id} title={p.name || p.email} src={p.profileImageUrl} alt={p.name} className="w-6 h-6 rounded-full object-cover border bg-gray-200" />
+                                                ) : (
+                                                    <div key={p._id} title={p.name || p.email} className="w-6 h-6 rounded-full bg-gray-400 border text-white text-xs flex items-center justify-center">
+                                                        {(p.name || p.email || '?').charAt(0).toUpperCase()}
+                                                    </div>
+                                                )
+                                            )}
                                         </div>
                                         <div className="mt-1 text-sm">Individueel: {typeof r.participantTotal === 'number' ? `€ ${r.participantTotal.toFixed(2)}` : '-'}</div>
                                         <div className="mt-1 text-sm">Totaal: {typeof r.orderTotal === 'number' ? `€ ${r.orderTotal.toFixed(2)}` : '-'}</div>
