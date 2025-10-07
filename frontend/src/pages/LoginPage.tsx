@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Utensils } from 'lucide-react';
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
@@ -19,7 +19,8 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            await login(email, password);
+            const fullEmail = username.includes('@') ? username : `${username}@bluemonkeysit.nl`;
+            await login(fullEmail, password);
             navigate('/');
         } catch (error) {
             // Error wordt afgehandeld in AuthContext
@@ -52,15 +53,19 @@ export default function LoginPage() {
                     <form onSubmit={handleSubmit}>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="naam@voorbeeld.nl"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
+                                <Label htmlFor="username">Emailadres</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        id="username"
+                                        type="text"
+                                        placeholder="jouw.naam"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value.replace('@', ''))}
+                                        required
+                                        className="flex-1"
+                                    />
+                                    <span className="text-gray-600 whitespace-nowrap">@bluemonkeysit.nl</span>
+                                </div>
                             </div>
 
                             <div className="space-y-2">

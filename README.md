@@ -3,9 +3,9 @@
 Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrators beheren restaurants, openen/sluiten een dagelijkse order en beheren gebruikers. Medewerkers voegen hun eigen lunchitems toe. Iedereen krijgt realtime notificaties.
 
 ## 🌟 Kernfeatures
-- **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie alleen met e-mails die eindigen op `@bluemonkeysit.nl`.
+- **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie met email verificatie (activatielink geldig 24u); wachtwoord vereist: min 8 chars, hoofdletter, kleine letter, cijfer, speciaal teken. Alleen `@bluemonkeysit.nl` emails toegestaan (invoer: alleen username).
 - **Restaurants**: Admin kan restaurants aanmaken/bewerken/verwijderen, incl. afbeelding (Cloudinary), website en optionele menulink.
-- **Orders & items**: Admin opent/sluitt dagorder; medewerkers voegen items toe (naam/notities/prijs). Realtime updates met Socket.IO. Bij openen en sluiten gaat een notificatie naar alle gebruikers.
+- **Orders & items**: Admin opent/sluit dagorder; medewerkers voegen items toe (naam/notities/prijs). Realtime updates met Socket.IO. Bij openen en sluiten gaat een notificatie naar alle gebruikers. Employees zien alleen orders vanaf hun registratiedatum; admins zien volledige geschiedenis.
 - **Notificaties**: Lijst, markeer gelezen/alles-gelezen; realtime bell-counter en toast bij nieuwe notificaties. Admins ontvangen automatisch een notificatie bij uploaden van een bonnetje. Notificaties bevatten nu een route (bijv. `/orders/{id}` of `/receipts`) en zijn klikbaar.
 - **Uploads**: Profielfoto upload via `multipart/form-data` naar Cloudinary.
 - **Bonnetjes (admin)**: upload bon bij gesloten order; overzicht met downloads; dashboards (totaal, per restaurant, per persoon).
@@ -53,7 +53,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - Uploads verlopen via `multipart/form-data` en worden gevalideerd.
 
 ## 📚 Endpoints (indicatief, onder `/api`)
-- Auth: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`
+- Auth: `POST /auth/register` (met birthDate, stuurt verificatie email), `GET /auth/verify-email/{token}`, `POST /auth/login` (check emailVerified en isActive), `GET /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`
 - Users: `GET /users` (admin), `GET/PATCH /users/{id}`, `PATCH /users/{id}/role`, `PATCH /users/{id}/status`, `POST /users/{id}/reset-password`, `DELETE /users/{id}`
 - Restaurants: `GET /restaurants`; `POST/PATCH/DELETE /restaurants` (admin, met upload)
 - Restaurants Menu: `GET /restaurants/{id}/menu`, `POST /restaurants/{id}/menu/import` (XML/JSON of `multipart/form-data`, admin). Menu-items ondersteunen optioneel `variants` en `optionGroups` met `priceDelta` (zie voorbeeld hieronder).

@@ -9,7 +9,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (name: string, email: string, password: string) => Promise<void>;
+    register: (name: string, email: string, password: string, birthDate?: string) => Promise<void>;
     logout: () => void;
     isAdmin: boolean;
     unreadNotifications: number;
@@ -131,14 +131,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    const register = async (name: string, email: string, password: string) => {
+    const register = async (name: string, email: string, password: string, birthDate?: string) => {
         try {
-            const response = await authApi.register({ name, email, password });
-            localStorage.setItem('token', response.token);
-            setUser(response.user);
-            // Socket connectie opzetten na registratie
-            socketService.connect(response.token);
-            toast.success('Account succesvol aangemaakt!');
+            await authApi.register({ name, email, password, birthDate });
+            // GEEN automatische login meer; gebruiker moet eerst email verifiëren
         } catch (error: any) {
             toast.error(error.response?.data?.error || 'Registratie mislukt');
             throw error;

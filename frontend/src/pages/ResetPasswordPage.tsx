@@ -4,11 +4,12 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
-import { Utensils, CheckCircle } from 'lucide-react';
+import { Utensils, CheckCircle, Check, X } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import socketService from '../services/socket';
 
 export default function ResetPasswordPage() {
-    const [email, setEmail] = useState('');
     const [tempPassword, setTempPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,18 +18,36 @@ export default function ResetPasswordPage() {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    // Wachtwoord sterkte checks
+    const passwordChecks = {
+        minLength: newPassword.length >= 8,
+        hasUppercase: /[A-Z]/.test(newPassword),
+        hasLowercase: /[a-z]/.test(newPassword),
+        hasNumber: /[0-9]/.test(newPassword),
+        hasSpecial: /[^A-Za-z0-9]/.test(newPassword),
+    };
+
+    const allPasswordChecksPassed = Object.values(passwordChecks).every(Boolean);
+
+    const PasswordRequirement = ({ met, label }: { met: boolean; label: string }) => (
+        <div className={`flex items-center gap-2 text-sm ${met ? 'text-green-600' : 'text-red-600'}`}>
+            {met ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            <span>{label}</span>
+        </div>
+    );
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
         // Validatie
-        if (newPassword !== confirmPassword) {
-            setError('Wachtwoorden komen niet overeen');
+        if (!allPasswordChecksPassed) {
+            setError('Wachtwoord voldoet niet aan alle eisen');
             return;
         }
 
-        if (newPassword.length < 6) {
-            setError('Wachtwoord moet minimaal 6 karakters lang zijn');
+        if (newPassword !== confirmPassword) {
+            setError('Wachtwoorden komen niet overeen');
             return;
         }
 
@@ -36,22 +55,22 @@ export default function ResetPasswordPage() {
 
         try {
             const response = await api.post('/auth/reset-password', {
-                email,
-                tempPassword,
+                tempPassword: tempPassword.trim(),
                 newPassword
             });
 
-            // Sla token op in localStorage
-            if (response.data.token) {
+            // Login gebruiker met token
+            if (response.data.token && response.data.user) {
                 localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                // Trigger socket connect
+                socketService.connect(response.data.token);
             }
 
             setSuccess(true);
 
-            // Redirect na 2 seconden
+            // Redirect na 2 seconden naar dashboard (React Router navigeert, AuthContext pikt token op)
             setTimeout(() => {
-                navigate('/');
+                window.location.href = '/';
             }, 2000);
         } catch (error: any) {
             setError(error.response?.data?.message || 'Er is een fout opgetreden');
@@ -111,29 +130,18 @@ export default function ResetPasswordPage() {
                     <form onSubmit={handleSubmit}>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="naam@voorbeeld.nl"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="tempPassword">Tijdelijk wachtwoord</Label>
+                                <Label htmlFor="tempPassword">Tijdelijk wachtwoord *</Label>
                                 <Input
                                     id="tempPassword"
                                     type="text"
                                     placeholder="Uit je email"
                                     value={tempPassword}
-                                    onChange={(e) => setTempPassword(e.target.value)}
+                                    onChange={(e) => setTempPassword(e.target.value.trim())}
                                     required
+                                    autoFocus
                                 />
                                 <p className="text-xs text-gray-500">
-                                    Check je email voor het tijdelijke wachtwoord
+                                    Kopieer het tijdelijke wachtwoord uit je email
                                 </p>
                             </div>
 
@@ -142,12 +150,21 @@ export default function ResetPasswordPage() {
                                 <Input
                                     id="newPassword"
                                     type="password"
-                                    placeholder="Minimaal 6 karakters"
+                                    placeholder="Kies een sterk wachtwoord"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
                                     required
-                                    minLength={6}
                                 />
+                                {newPassword && (
+                                    <div className="mt-2 space-y-1 p-3 bg-gray-50 rounded border">
+                                        <p className="text-xs font-medium text-gray-700 mb-2">Wachtwoord vereisten:</p>
+                                        <PasswordRequirement met={passwordChecks.minLength} label="Minimaal 8 karakters" />
+                                        <PasswordRequirement met={passwordChecks.hasUppercase} label="Minimaal 1 hoofdletter" />
+                                        <PasswordRequirement met={passwordChecks.hasLowercase} label="Minimaal 1 kleine letter" />
+                                        <PasswordRequirement met={passwordChecks.hasNumber} label="Minimaal 1 cijfer" />
+                                        <PasswordRequirement met={passwordChecks.hasSpecial} label="Minimaal 1 speciaal teken (!@#$%...)" />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -171,7 +188,7 @@ export default function ResetPasswordPage() {
                             <Button
                                 type="submit"
                                 className="w-full"
-                                disabled={loading}
+                                disabled={loading || !allPasswordChecksPassed}
                             >
                                 {loading ? 'Wachtwoord wijzigen...' : 'Wachtwoord wijzigen'}
                             </Button>

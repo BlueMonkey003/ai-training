@@ -8,7 +8,7 @@ import { Utensils, ArrowLeft, Mail } from 'lucide-react';
 import api from '../services/api';
 
 export default function ForgotPasswordPage() {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
@@ -20,7 +20,8 @@ export default function ForgotPasswordPage() {
         setError('');
 
         try {
-            await api.post('/auth/forgot-password', { email });
+            const fullEmail = username.includes('@') ? username : `${username}@bluemonkeysit.nl`;
+            await api.post('/auth/forgot-password', { email: fullEmail });
             setSubmitted(true);
         } catch (error: any) {
             setError(error.response?.data?.message || 'Er is een fout opgetreden');
@@ -100,16 +101,20 @@ export default function ForgotPasswordPage() {
                     <form onSubmit={handleSubmit}>
                         <CardContent>
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="naam@voorbeeld.nl"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    autoFocus
-                                />
+                                <Label htmlFor="username">Emailadres</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        id="username"
+                                        type="text"
+                                        placeholder="jouw.naam"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value.replace('@', ''))}
+                                        required
+                                        autoFocus
+                                        className="flex-1"
+                                    />
+                                    <span className="text-gray-600 whitespace-nowrap">@bluemonkeysit.nl</span>
+                                </div>
                             </div>
                             {error && (
                                 <p className="mt-2 text-sm text-red-600">{error}</p>

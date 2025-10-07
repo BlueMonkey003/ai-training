@@ -7,7 +7,11 @@ export interface IUser extends Document {
     passwordHash: string;
     role: 'employee' | 'admin';
     profileImageUrl?: string;
+    birthDate?: Date;
     isActive: boolean;
+    emailVerified: boolean;
+    emailVerificationToken?: string;
+    emailVerificationExpires?: Date;
     resetPasswordToken?: string;
     resetPasswordExpires?: Date;
     createdAt: Date;
@@ -49,9 +53,25 @@ const userSchema = new Schema<IUser>(
             type: String,
             default: null,
         },
+        birthDate: {
+            type: Date,
+            default: null,
+        },
         isActive: {
             type: Boolean,
             default: true,
+        },
+        emailVerified: {
+            type: Boolean,
+            default: false,
+        },
+        emailVerificationToken: {
+            type: String,
+            default: null,
+        },
+        emailVerificationExpires: {
+            type: Date,
+            default: null,
         },
         resetPasswordToken: {
             type: String,
@@ -91,6 +111,8 @@ userSchema.methods.toJSON = function () {
     delete obj.passwordHash;
     delete obj.resetPasswordToken;
     delete obj.resetPasswordExpires;
+    delete obj.emailVerificationToken;
+    delete obj.emailVerificationExpires;
     return obj;
 };
 

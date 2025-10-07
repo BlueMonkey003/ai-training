@@ -4,7 +4,9 @@ export interface User {
     email: string;
     role: 'employee' | 'admin';
     profileImageUrl?: string;
+    birthDate?: string;
     isActive: boolean;
+    emailVerified: boolean;
     createdAt: string;
     updatedAt: string;
 }
