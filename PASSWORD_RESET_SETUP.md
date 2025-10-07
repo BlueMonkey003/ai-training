@@ -60,10 +60,10 @@ Voor productie wordt aangeraden om een professionele email service te gebruiken:
 
 2. **Gebruiker reset wachtwoord**
    - Gebruiker gaat naar `/reset-password`
-   - Vult email, tijdelijk wachtwoord en nieuw wachtwoord in
-   - Systeem verifieert tijdelijk wachtwoord
-   - Nieuw wachtwoord wordt opgeslagen
-   - Gebruiker wordt automatisch ingelogd
+   - Vult alleen tijdelijk wachtwoord en nieuw wachtwoord in (email optioneel)
+   - Systeem zoekt gebruiker via tijdelijk wachtwoord (uniek)
+   - Nieuw wachtwoord wordt opgeslagen (emailVerified blijft behouden)
+   - Gebruiker wordt automatisch ingelogd en doorgestuurd naar dashboard
 
 ### Security Features:
 
@@ -71,6 +71,8 @@ Voor productie wordt aangeraden om een professionele email service te gebruiken:
 - Tijdelijk wachtwoord wordt gehashed opgeslagen
 - Response geeft nooit aan of email bestaat (voorkomt email enumeration)
 - Na succesvol resetten wordt bevestigingsmail gestuurd
+- emailVerified status blijft behouden na wachtwoord reset
+- Spaties worden automatisch getrimd uit tijdelijk wachtwoord
 
 ## 🧪 Testen
 
@@ -125,9 +127,9 @@ Response:
 ### POST /api/auth/reset-password
 ```json
 {
-  "email": "user@example.com",
   "tempPassword": "ABC12345",
-  "newPassword": "newSecurePassword123"
+  "newPassword": "newSecurePassword123",
+  "email": "user@example.com"  // optioneel
 }
 ```
 
@@ -147,4 +149,5 @@ Voor productie deployment:
 1. Update email configuratie in productie .env
 2. Test email service connectiviteit
 3. Monitor email delivery rates
-4. Overweeg email templates te gebruiken voor betere styling
+4. Email templates zijn nu gestyled met BlueMonkeys logo en huisstijlkleuren
+5. Wachtwoord reset emails zijn responsive voor laptop en mobiel

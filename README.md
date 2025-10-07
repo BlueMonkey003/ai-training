@@ -3,7 +3,7 @@
 Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrators beheren restaurants, openen/sluiten een dagelijkse order en beheren gebruikers. Medewerkers voegen hun eigen lunchitems toe. Iedereen krijgt realtime notificaties.
 
 ## 🌟 Kernfeatures
-- **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie met email verificatie (activatielink geldig 24u); wachtwoord vereist: min 8 chars, hoofdletter, kleine letter, cijfer, speciaal teken. Alleen `@bluemonkeysit.nl` emails toegestaan (invoer: alleen username).
+- **Authenticatie & autorisatie**: JWT-bearer tokens, protected routes; admin-only acties. Registratie met email verificatie (activatielink geldig 24u); wachtwoord vereist: min 8 chars, hoofdletter, kleine letter, cijfer, speciaal teken. Alleen `@bluemonkeysit.nl` emails toegestaan (invoer: alleen username). Wachtwoord reset: alleen tijdelijk wachtwoord nodig (email optioneel), auto-login na reset, emailVerified blijft behouden.
 - **Restaurants**: Admin kan restaurants aanmaken/bewerken/verwijderen, incl. afbeelding (Cloudinary), website en optionele menulink.
 - **Orders & items**: Admin opent/sluit dagorder; medewerkers voegen items toe (naam/notities/prijs). Realtime updates met Socket.IO. Bij openen en sluiten gaat een notificatie naar alle gebruikers. Employees zien alleen orders vanaf hun registratiedatum; admins zien volledige geschiedenis.
 - **Notificaties**: Lijst, markeer gelezen/alles-gelezen; realtime bell-counter en toast bij nieuwe notificaties. Admins ontvangen automatisch een notificatie bij uploaden van een bonnetje. Notificaties bevatten nu een route (bijv. `/orders/{id}` of `/receipts`) en zijn klikbaar.
@@ -11,6 +11,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - **Bonnetjes (admin)**: upload bon bij gesloten order; overzicht met downloads; dashboards (totaal, per restaurant, per persoon).
 - **Menu-varianten & add-ons**: Menukaarten ondersteunen varianten (bijv. 15/30 cm) en optiegroepen (single/multi) met prijsdelta's. Frontend toont automatisch dropdowns/checkboxes en rekent de prijs live uit. Import via XML/JSON.
 - **Versie-informatie**: Header toont `vX.Y.Z (build N)`; Over/Instellingen toont versie/build en de laatste wijzigingen.
+- **Email templates**: Alle emails (verificatie, wachtwoord reset, bevestigingen) zijn gestyled met BlueMonkeys logo en huisstijlkleuren, responsive voor laptop en mobiel.
 
 ## 🧱 Architectuur & stack
 - **Backend**: Node.js, Express, TypeScript, MongoDB (Mongoose), JWT, Socket.IO, Swagger (`swagger-ui-express` + `swagger-jsdoc`), `helmet`, `compression`, rate limiting, CORS.
@@ -53,7 +54,7 @@ Interne webapplicatie voor lunchbestellingen binnen BlueMonkeys IT. Administrato
 - Uploads verlopen via `multipart/form-data` en worden gevalideerd.
 
 ## 📚 Endpoints (indicatief, onder `/api`)
-- Auth: `POST /auth/register` (met birthDate, stuurt verificatie email), `GET /auth/verify-email/{token}`, `POST /auth/login` (check emailVerified en isActive), `GET /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`
+- Auth: `POST /auth/register` (met birthDate, stuurt verificatie email), `GET /auth/verify-email/{token}`, `POST /auth/login` (check emailVerified en isActive), `GET /auth/me`, `POST /auth/forgot-password` (alleen username), `POST /auth/reset-password` (tijdelijk wachtwoord + nieuw wachtwoord, email optioneel)
 - Users: `GET /users` (admin), `GET/PATCH /users/{id}`, `PATCH /users/{id}/role`, `PATCH /users/{id}/status`, `POST /users/{id}/reset-password`, `DELETE /users/{id}`
 - Restaurants: `GET /restaurants`; `POST/PATCH/DELETE /restaurants` (admin, met upload)
 - Restaurants Menu: `GET /restaurants/{id}/menu`, `POST /restaurants/{id}/menu/import` (XML/JSON of `multipart/form-data`, admin). Menu-items ondersteunen optioneel `variants` en `optionGroups` met `priceDelta` (zie voorbeeld hieronder).
