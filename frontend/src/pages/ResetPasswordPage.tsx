@@ -6,7 +6,6 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Utensils, CheckCircle, Check, X } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
 import socketService from '../services/socket';
 
 export default function ResetPasswordPage() {
