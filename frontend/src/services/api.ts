@@ -21,8 +21,8 @@ api.interceptors.request.use((config) => {
 
 // Auth endpoints
 export const authApi = {
-    register: async (data: { name: string; email: string; password: string }) => {
-        const response = await api.post<AuthResponse>('/auth/register', data);
+    register: async (data: { name: string; email: string; password: string; birthDate?: string }) => {
+        const response = await api.post<{ success: boolean; message: string }>('/auth/register', data);
         return response.data;
     },
 
@@ -33,6 +33,11 @@ export const authApi = {
 
     getMe: async () => {
         const response = await api.get<{ success: boolean; user: User }>('/auth/me');
+        return response.data;
+    },
+
+    verifyEmail: async (token: string) => {
+        const response = await api.get<{ success: boolean; message: string }>(`/auth/verify-email/${token}`);
         return response.data;
     },
 };

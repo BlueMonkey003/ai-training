@@ -4,6 +4,14 @@
   "buildNumber": 20,
   "recentCommits": [
     {
+      "message": "Registratieproces verbeterd",
+      "date": "2025-10-07"
+    },
+    {
+      "message": "Wachtwoord vergeten proces verbeterd",
+      "date": "2025-10-07"
+    },
+    {
       "date": "2025-09-30",
       "message": "Digitaal bonnetje zichtbaar"
     },
@@ -14,14 +22,6 @@
     {
       "date": "2025-09-26",
       "message": "XML menu template te downloaden voor nieuwe restaurants"
-    },
-    {
-      "date": "2025-09-26",
-      "message": "XML menu generiek gemaakt"
-    },
-    {
-      "date": "2025-09-26",
-      "message": "Bestellingen kunnen uitgebreider door extra dropdowns"
     }
   ]
 }

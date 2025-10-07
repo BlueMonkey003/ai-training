@@ -205,6 +205,11 @@ export default function UserManagementPage() {
                                             )}
                                         </div>
                                         <div className="text-sm text-gray-600">{user.email}</div>
+                                        {user.birthDate && (
+                                            <div className="text-xs text-gray-500">
+                                                Geb.: {new Date(user.birthDate).toLocaleDateString('nl-NL')}
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'admin'
                                                 ? 'bg-purple-100 text-purple-800'
@@ -224,6 +229,16 @@ export default function UserManagementPage() {
                                                     <><Check className="h-3 w-3 mr-1" /> Actief</>
                                                 ) : (
                                                     <><X className="h-3 w-3 mr-1" /> Inactief</>
+                                                )}
+                                            </span>
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.emailVerified
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                {user.emailVerified ? (
+                                                    <><Check className="h-3 w-3 mr-1" /> Geverifieerd</>
+                                                ) : (
+                                                    <><X className="h-3 w-3 mr-1" /> Niet geverifieerd</>
                                                 )}
                                             </span>
                                         </div>

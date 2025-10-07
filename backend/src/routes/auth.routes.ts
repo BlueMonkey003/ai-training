@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, forgotPassword, resetPassword } from '../controllers/auth.controller';
+import { register, login, getMe, forgotPassword, resetPassword, verifyEmail } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -229,5 +229,25 @@ router.post('/forgot-password', forgotPassword);
  *         description: Ongeldig of verlopen token
  */
 router.post('/reset-password', resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/verify-email/{token}:
+ *   get:
+ *     summary: Verifieer email met token
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email geverifieerd
+ *       400:
+ *         description: Ongeldige token
+ */
+router.get('/verify-email/:token', verifyEmail);
 
 export default router; 

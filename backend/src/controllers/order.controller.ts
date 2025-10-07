@@ -8,7 +8,7 @@ import { io } from '../server';
 import { emitNewOrder, emitOrderClosed, emitNotification } from '../sockets/socketHandlers';
 
 export const getOrders = async (
-    req: Request,
+    req: Request & { user?: any },
     res: Response,
     next: NextFunction
 ) => {
@@ -22,6 +22,21 @@ export const getOrders = async (
             const endDate = new Date(date as string);
             endDate.setDate(endDate.getDate() + 1);
             filter.date = { $gte: startDate, $lt: endDate };
+        }
+
+        // Voor employees: alleen orders vanaf hun createdAt tonen
+        if (req.user && req.user.role === 'employee') {
+            const userCreatedAt = req.user.createdAt ? new Date(req.user.createdAt) : new Date();
+            if (!filter.date) {
+                filter.date = { $gte: userCreatedAt };
+            } else {
+                // Combineer met bestaande date filter
+                if (filter.date.$gte) {
+                    filter.date.$gte = new Date(Math.max(filter.date.$gte.getTime(), userCreatedAt.getTime()));
+                } else {
+                    filter.date = { ...filter.date, $gte: userCreatedAt };
+                }
+            }
         }
 
         const orders = await Order.find(filter)
